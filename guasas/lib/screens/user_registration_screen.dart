@@ -58,6 +58,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
       );
 
       String? result = await _userService.registerUser(newUser);
+      print("adiooooooooooooooo");
 
       if (result == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -71,6 +72,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
           );
         });
       } else {
+        print("error: $result");
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(result)),
         );

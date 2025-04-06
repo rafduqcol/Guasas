@@ -14,36 +14,24 @@ class UserService {
         password: user.password,
       );
 
-      await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
-        'firstName': user.firstName,
-        'lastName': user.lastName,
-        'username': user.username,
-        'email': user.email,
-        'password': BCrypt.hashpw(user.password, BCrypt.gensalt()), 
-        'avatarUrl': user.avatarUrl,
-      });
 
+
+    await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
+      'uid': userCredential.user!.uid,
+      'firstName': user.firstName,
+      'lastName': user.lastName,
+      'username': user.username,
+      'email': user.email,
+      'password': BCrypt.hashpw(user.password, BCrypt.gensalt()), 
+      'avatarUrl': user.avatarUrl,
+    });
+    
       return null; 
     } catch (e) {
       return e.toString(); 
     }
   }
   
-  Future<custom_user.User?> getUserFromFirestore(String uid) async {
-    try {
-      DocumentSnapshot doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-
-      if (doc.exists) {
-        return custom_user.User.fromMap(doc.data() as Map<String, dynamic>);
-      } else {
-        return null;  
-      }
-    } catch (e) {
-      print("Error al obtener usuario de Firestore: $e");
-      return null;
-    }
-  }
-
   Future<String?> loginWithEmailPassword(String email, String password) async {
     try {
       // Verificar si el correo electrónico existe en Firestore
