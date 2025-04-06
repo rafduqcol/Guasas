@@ -148,7 +148,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
                     }
                     return null;
                   },
-                  onSaved: (value) => _avatarUrl = value ?? '',
+                  onSaved: (value) => _username = value ?? '',
                 ),
                 const SizedBox(height: 16),
                 _buildTextFormField(
