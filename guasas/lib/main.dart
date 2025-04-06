@@ -7,6 +7,7 @@ import 'screens/home.dart';
 import 'screens/add_users_screen.dart';
 import 'screens/chat_detail_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/main_menu_screen.dart';
 
 
 void main() async {
@@ -29,6 +30,7 @@ class MyApp extends StatelessWidget {
         '/addUsers': (context) => AddUsersScreen(), // Ruta para la pantalla de agregar usuarios
         '/chatDetail': (context) => ChatDetailScreen(chatId: ModalRoute.of(context)!.settings.arguments as String),
         '/profile': (context) => ProfileScreen(), // Ruta para la pantalla de perfil
+        '/chatList': (context) => ChatListScreen(), // Ruta para la pantalla de lista de chats
       },
     );
   }
