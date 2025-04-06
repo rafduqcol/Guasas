@@ -46,6 +46,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
   }
 
   void _register() async {
+    print("Iniciando el registro del usuario...");
     if (_formKey.currentState?.validate() ?? false) {
       _formKey.currentState?.save();
       custom_user.User newUser = custom_user.User(
@@ -58,7 +59,6 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
       );
 
       String? result = await _userService.registerUser(newUser);
-      print("adiooooooooooooooo");
 
       if (result == null) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -17,18 +17,6 @@ class User {
     required this.avatarUrl,
   });
 
-  // Método para convertir un Map a un objeto User
-  factory User.fromMap(Map<String, dynamic> map) {
-    return User(
-      uid: map['uid'] ?? '',
-      firstName: map['firstName'] ?? '',
-      lastName: map['lastName'] ?? '',
-      username: map['username'] ?? '',
-      email: map['email'] ?? '',
-      password: map['password'] ?? '',
-      avatarUrl: map['avatarUrl'] ?? '',
-    );
-  }
 
   // Método para convertir un objeto User a un Map
   Map<String, dynamic> toMap() {
@@ -42,4 +30,17 @@ class User {
       'avatarUrl': avatarUrl,
     };
   }
+    // Método para convertir un Map a un objeto User
+  factory User.fromMap(Map<String, dynamic> map) {
+    return User(
+      uid: map['uid'] ?? '',
+      firstName: map['firstName'] ?? '',
+      lastName: map['lastName'] ?? '',
+      username: map['username'] ?? '',
+      email: map['email'] ?? '',
+      password: map['password'] ?? '',
+      avatarUrl: map['avatarUrl'] ?? '',
+    );
+  }
+
 }

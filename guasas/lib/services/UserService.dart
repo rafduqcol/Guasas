@@ -7,15 +7,26 @@ class UserService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  Future<String?> registerUser(custom_user.User user) async {
-    try {
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-        email: user.email,
-        password: user.password,
-      );
+Future<String?> registerUser(custom_user.User user) async {
+  try {
+    print("Iniciando el registro del usuario...");
 
+    UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+      email: user.email,
+      password: user.password,
+    );
 
+    // Imprime los valores de los datos del usuario
+    print("Datos del usuario:");
 
+    print("Nombre: ${user.firstName}");
+    print("Apellido: ${user.lastName}");
+    print("Nombre de usuario: ${user.username}");
+    print("Correo electrónico: ${user.email}");
+    print("Contraseña: ${user.password}");
+    print("URL del avatar: ${user.avatarUrl}");
+
+    // Inserción en Firestore
     await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
       'uid': userCredential.user!.uid,
       'firstName': user.firstName,
@@ -25,12 +36,13 @@ class UserService {
       'password': BCrypt.hashpw(user.password, BCrypt.gensalt()), 
       'avatarUrl': user.avatarUrl,
     });
-    
-      return null; 
-    } catch (e) {
-      return e.toString(); 
-    }
+ 
+    return null; 
+  } catch (e) {
+    return e.toString(); 
   }
+}
+
   
   Future<String?> loginWithEmailPassword(String email, String password) async {
     try {
