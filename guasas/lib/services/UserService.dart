@@ -1,10 +1,35 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/user.dart';  // Asegúrate de importar tu clase User
+import 'package:bcrypt/bcrypt.dart'; 
+import '../models/user.dart';  
+
+
+
+Future<bool> emailExists(String email) async {
+  try {
+    final querySnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .where('email', isEqualTo: email)
+        .get();
+
+    return querySnapshot.docs.isNotEmpty;
+  } on FirebaseException catch (e) {
+    print("Error de Firebase al comprobar si el correo electrónico existe: ${e.message}");
+    return false;
+  } catch (e) {
+    print("Error inesperado al comprobar si el correo electrónico existe: $e");
+    return false;
+  }
+}
+
 
 Future<bool> addUserToFirestore(User user) async {
   try {
-    final userRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
-    await userRef.set(user.toMap());
+    String hashedPassword = BCrypt.hashpw(user.password, BCrypt.gensalt());
+
+    final userWithHashedPassword = user.copyWith(password: hashedPassword);
+
+    final userRef = FirebaseFirestore.instance.collection('users').doc(userWithHashedPassword.uid);
+    await userRef.set(userWithHashedPassword.toMap());
     print("Usuario guardado exitosamente");
     return true;
   } on FirebaseException catch (e) {
