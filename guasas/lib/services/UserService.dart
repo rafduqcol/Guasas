@@ -1,61 +1,79 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:bcrypt/bcrypt.dart'; 
-import '../models/user.dart';  
+import '../models/user.dart' as custom_user;
+import 'package:bcrypt/bcrypt.dart';
 
+class UserService {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  Future<String?> registerUser(custom_user.User user) async {
+    try {
+      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+        email: user.email,
+        password: user.password,
+      );
 
-Future<bool> emailExists(String email) async {
-  try {
-    final querySnapshot = await FirebaseFirestore.instance
-        .collection('users')
-        .where('email', isEqualTo: email)
-        .get();
+      await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
+        'firstName': user.firstName,
+        'lastName': user.lastName,
+        'username': user.username,
+        'email': user.email,
+        'password': BCrypt.hashpw(user.password, BCrypt.gensalt()), 
+        'avatarUrl': user.avatarUrl,
+      });
 
-    return querySnapshot.docs.isNotEmpty;
-  } on FirebaseException catch (e) {
-    print("Error de Firebase al comprobar si el correo electrónico existe: ${e.message}");
-    return false;
-  } catch (e) {
-    print("Error inesperado al comprobar si el correo electrónico existe: $e");
-    return false;
+      return null; 
+    } catch (e) {
+      return e.toString(); 
+    }
   }
-}
+  
+  Future<custom_user.User?> getUserFromFirestore(String uid) async {
+    try {
+      DocumentSnapshot doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
 
-
-Future<bool> addUserToFirestore(User user) async {
-  try {
-    String hashedPassword = BCrypt.hashpw(user.password, BCrypt.gensalt());
-
-    final userWithHashedPassword = user.copyWith(password: hashedPassword);
-
-    final userRef = FirebaseFirestore.instance.collection('users').doc(userWithHashedPassword.uid);
-    await userRef.set(userWithHashedPassword.toMap());
-    print("Usuario guardado exitosamente");
-    return true;
-  } on FirebaseException catch (e) {
-    print("Error de Firebase al guardar el usuario: ${e.message}");
-    return false;
-  } catch (e) {
-    print("Error inesperado al guardar el usuario: $e");
-    return false;
-  }
-}
-
-Future<User?> getUserFromFirestore(String uid) async {
-  try {
-    final docSnapshot = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-
-    if (docSnapshot.exists && docSnapshot.data() != null) {
-      return User.fromMap(docSnapshot.data()!);
-    } else {
-      print("Usuario no encontrado");
+      if (doc.exists) {
+        return custom_user.User.fromMap(doc.data() as Map<String, dynamic>);
+      } else {
+        return null;  
+      }
+    } catch (e) {
+      print("Error al obtener usuario de Firestore: $e");
       return null;
     }
-  } on FirebaseException catch (e) {
-    print("Error de Firebase al obtener el usuario: ${e.message}");
-    return null;
-  } catch (e) {
-    print("Error inesperado al obtener el usuario: $e");
-    return null;
+  }
+
+  Future<String?> loginWithEmailPassword(String email, String password) async {
+    try {
+      // Verificar si el correo electrónico existe en Firestore
+      final userSnapshot = await _firestore
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .limit(1)
+          .get();
+
+      if (userSnapshot.docs.isEmpty) {
+        return 'El correo electrónico no está registrado.';
+      }
+
+      final userDoc = userSnapshot.docs.first;
+      final storedHashedPassword = userDoc['password'];
+
+      bool passwordMatch = await BCrypt.checkpw(password, storedHashedPassword);
+
+      if (passwordMatch) {
+        UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+
+        return null;
+      } else {
+        return 'Contraseña incorrecta';
+      }
+    } catch (e) {
+      return 'Error al intentar iniciar sesión: $e';
+    }
   }
 }

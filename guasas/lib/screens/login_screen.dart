@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:bcrypt/bcrypt.dart'; // Importa bcrypt
-
+import '../services/UserService.dart'; // Asegúrate de importar el servicio correctamente.
+import 'main_menu_screen.dart'; // Asegúrate de importar la pantalla de lista de chats.
 class LoginScreen extends StatefulWidget {
   @override
   _LoginScreenState createState() => _LoginScreenState();
@@ -13,45 +11,33 @@ class _LoginScreenState extends State<LoginScreen> {
   String _email = '';
   String _password = '';
 
+  final UserService _userService = UserService(); // Crear una instancia de UserService
+
   void _login() async {
     if (_formKey.currentState?.validate() ?? false) {
       _formKey.currentState?.save();
-      
-      try {
-        // Verificar si el correo electrónico existe en Firestore
-        final userSnapshot = await FirebaseFirestore.instance
-            .collection('users')
-            .where('email', isEqualTo: _email)
-            .limit(1)
-            .get();
-        
-        if (userSnapshot.docs.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('El correo electrónico no está registrado.')),
-          );
-          return;
-        }
 
-        // Recuperar el documento del usuario
-        final userDoc = userSnapshot.docs.first;
-        final storedHashedPassword = userDoc['password']; // Contraseña hasheada en Firestore
-        
-        // Comparar la contraseña ingresada con la almacenada usando bcrypt
-        bool passwordMatch = await BCrypt.checkpw(_password, storedHashedPassword);
+      // Llamar al servicio de login
+      String? result = await _userService.loginWithEmailPassword(_email, _password);
 
-        if (passwordMatch) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Inicio de sesión exitoso')),
-          );
-          // Aquí puedes navegar a la siguiente pantalla o realizar cualquier otra acción
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Contraseña incorrecta')),
-          );
-        }
-      } catch (e) {
+      if (result == null) {
+        // Inicio de sesión exitoso
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al intentar iniciar sesión: $e')),
+          SnackBar(content: Text('Inicio de sesión exitoso')),
+        );
+
+         Future.delayed(Duration(seconds: 2), () {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => ChatListScreen()),
+          );
+        });
+
+        // Navegar a la siguiente pantalla o realizar cualquier acción adicional
+      } else {
+        // Error en el inicio de sesión
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result)), // Mostrar el mensaje de error
         );
       }
     }
@@ -80,23 +66,23 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               children: [
                 _buildTextFormField(
-                label: 'Correo Electrónico',
-                validator: (value) {
-                  if (value?.isEmpty ?? true) {
-                    return 'Por favor, ingresa tu correo electrónico';
-                  }
-                  if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value!)) {
-                    return 'Por favor, ingresa un correo electrónico válido';
-                  }
-                  if (value.length > 50) {
-                    return 'El correo electrónico no puede tener más de 50 caracteres';
-                  }
-                  return null;
-                },
-                onSaved: (value) => _email = value ?? '',
-              ),
+                  label: 'Correo Electrónico',
+                  validator: (value) {
+                    if (value?.isEmpty ?? true) {
+                      return 'Por favor, ingresa tu correo electrónico';
+                    }
+                    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value!)) {
+                      return 'Por favor, ingresa un correo electrónico válido';
+                    }
+                    if (value.length > 50) {
+                      return 'El correo electrónico no puede tener más de 50 caracteres';
+                    }
+                    return null;
+                  },
+                  onSaved: (value) => _email = value ?? '',
+                ),
                 const SizedBox(height: 16),
-              _buildTextFormField(
+                _buildTextFormField(
                   label: 'Contraseña',
                   validator: (value) {
                     if (value?.isEmpty ?? true) {
@@ -118,7 +104,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: _login,
+                    onPressed: _login, // Llamar a la función de login
                     style: ElevatedButton.styleFrom(
                       backgroundColor: buttonColor,
                       foregroundColor: pageColor,

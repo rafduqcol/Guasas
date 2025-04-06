@@ -1,18 +1,15 @@
 import 'package:flutter/material.dart';
-import '../models/user.dart';
 import '../services/UserService.dart';
-import 'login_screen.dart'; 
-import 'main_menu_screen.dart';
+import '../models/user.dart' as custom_user;
+import 'login_screen.dart';
 
 class UserRegistrationScreen extends StatefulWidget {
   @override
-  _UserRegistrationScreenState createState() =>
-      _UserRegistrationScreenState();
+  _UserRegistrationScreenState createState() => _UserRegistrationScreenState();
 }
 
 class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
   final _formKey = GlobalKey<FormState>();
-
   String _firstName = '';
   String _lastName = '';
   String _username = '';
@@ -20,51 +17,66 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
   String _password = '';
   String _avatarUrl = '';
 
-void _registerUser() async {
-  if (_formKey.currentState?.validate() ?? false) {
-    _formKey.currentState?.save();
+  final UserService _userService = UserService();
 
-    bool emailExistsFlag = await emailExists(_email);  
-
-    if (emailExistsFlag) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('El correo electrónico ya está registrado')),
-      );
-      return;
-    }
-
-    User newUser = User(
-      uid: DateTime.now().millisecondsSinceEpoch.toString(),
-      firstName: _firstName,
-      lastName: _lastName,
-      username: _username,
-      email: _email,
-      password: _password,
-      onlineStatus: false,
-      avatarUrl: _avatarUrl,
+  Widget _buildTextFormField({
+    required String label,
+    required Function(String?) onSaved,
+    String? Function(String?)? validator,
+    bool obscureText = false,
+  }) {
+    return TextFormField(
+      style: const TextStyle(color: Colors.white),
+      obscureText: obscureText,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: Colors.white),
+        enabledBorder: OutlineInputBorder(
+          borderSide: const BorderSide(color: Colors.white),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: const BorderSide(color: Colors.white, width: 2),
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+      validator: validator,
+      onSaved: onSaved,
     );
-
-    bool success = await addUserToFirestore(newUser);
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Usuario registrado exitosamente')),
-      );
-      
-      Future.delayed(Duration(seconds: 2), () {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => ChatListScreen()),
-        );
-      });
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Hubo un error al registrar el usuario')),
-      );
-    }
-
-    _formKey.currentState?.reset();
   }
-}
+
+  void _register() async {
+    if (_formKey.currentState?.validate() ?? false) {
+      _formKey.currentState?.save();
+      custom_user.User newUser = custom_user.User(
+        firstName: _firstName,
+        lastName: _lastName,
+        username: _username,
+        email: _email,
+        password: _password,
+        avatarUrl: _avatarUrl,
+      );
+
+      String? result = await _userService.registerUser(newUser);
+
+      if (result == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Usuario registrado con éxito')),
+        );
+
+        Future.delayed(Duration(seconds: 2), () {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => LoginScreen()),
+          );
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result)),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -87,19 +99,18 @@ void _registerUser() async {
           child: Form(
             key: _formKey,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-               _buildTextFormField(
+                _buildTextFormField(
                   label: 'Nombre',
                   validator: (value) {
                     if (value?.isEmpty ?? true) {
                       return 'Por favor, ingresa tu primer nombre';
                     }
                     if (value!.length < 3) {
-                      return 'El primer nombre debe tener al menos 3 caracteres';
+                      return 'El nombre debe tener al menos 3 caracteres';
                     }
                     if (value.length > 50) {
-                      return 'El primer nombre no puede tener más de 50 caracteres';
+                      return 'El nombre no puede tener más de 50 caracteres';
                     }
                     return null;
                   },
@@ -137,7 +148,7 @@ void _registerUser() async {
                     }
                     return null;
                   },
-                  onSaved: (value) => _username = value ?? '',
+                  onSaved: (value) => _avatarUrl = value ?? '',
                 ),
                 const SizedBox(height: 16),
                 _buildTextFormField(
@@ -148,9 +159,6 @@ void _registerUser() async {
                     }
                     if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value!)) {
                       return 'Por favor, ingresa un correo electrónico válido';
-                    }
-                    if (value.length > 50) {
-                      return 'El correo electrónico no puede tener más de 50 caracteres';
                     }
                     return null;
                   },
@@ -167,7 +175,7 @@ void _registerUser() async {
                       return 'La contraseña debe tener al menos 6 caracteres';
                     }
                     if (!RegExp(r'^(?=.*[A-Z])(?=.*\d)').hasMatch(value)) {
-                      return 'Debe contener al menos una letra mayúscula y un número';
+                      return 'La contraseña debe contener al menos una letra mayúscula y un número';
                     }
                     return null;
                   },
@@ -185,7 +193,7 @@ void _registerUser() async {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: _registerUser,
+                    onPressed: _register,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: buttonColor,
                       foregroundColor: pageColor,
@@ -195,7 +203,7 @@ void _registerUser() async {
                       ),
                     ),
                     child: const Text(
-                      'Registrar usuario',
+                      'Registrar',
                       style: TextStyle(fontSize: 18, color: Colors.white),
                     ),
                   ),
@@ -205,32 +213,6 @@ void _registerUser() async {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildTextFormField({
-    required String label,
-    String? Function(String?)? validator,
-    required void Function(String?) onSaved,
-    bool obscureText = false,
-  }) {
-    return TextFormField(
-      style: const TextStyle(color: Colors.white),
-      obscureText: obscureText,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(color: Colors.white),
-        enabledBorder: OutlineInputBorder(
-          borderSide: const BorderSide(color: Colors.white),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderSide: const BorderSide(color: Colors.white, width: 2),
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
-      validator: validator,
-      onSaved: onSaved,
     );
   }
 }
