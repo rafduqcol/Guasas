@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
-import '../models/user.dart'; // Asegúrate de tener la clase User importada
-import '../services/UserService.dart'; // Importa el servicio de Firestore
+import '../models/user.dart';
+import '../services/UserService.dart';
+import 'login_screen.dart'; 
 
 class UserRegistrationScreen extends StatefulWidget {
   @override
-  _UserRegistrationScreenState createState() => _UserRegistrationScreenState();
+  _UserRegistrationScreenState createState() =>
+      _UserRegistrationScreenState();
 }
 
 class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
-  final _formKey = GlobalKey<FormState>();  // Clave para validar el formulario
+  final _formKey = GlobalKey<FormState>();
 
-  // Variables de los campos de entrada
   String _firstName = '';
   String _lastName = '';
   String _username = '';
@@ -18,113 +19,217 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
   String _password = '';
   String _avatarUrl = '';
 
-  // Función para registrar al usuario
-  void _registerUser() {
-    if (_formKey.currentState?.validate() ?? false) {
-      _formKey.currentState?.save();
+void _registerUser() async {
+  if (_formKey.currentState?.validate() ?? false) {
+    _formKey.currentState?.save();
 
-      // Crear el objeto User con los datos del formulario
-      User newUser = User(
-        uid: DateTime.now().millisecondsSinceEpoch.toString(), // Usamos un valor temporal para el uid
-        firstName: _firstName,
-        lastName: _lastName,
-        username: _username,
-        email: _email,
-        password: _password,
-        onlineStatus: false,  // Puedes establecerlo como false, hasta que el usuario se conecte
-        avatarUrl: _avatarUrl,
+    bool emailExistsFlag = await emailExists(_email);  
+
+    if (emailExistsFlag) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('El correo electrónico ya está registrado')),
       );
+      return;
+    }
 
-      // Guarda el usuario en Firestore
-      addUserToFirestore(newUser);
+    User newUser = User(
+      uid: DateTime.now().millisecondsSinceEpoch.toString(),
+      firstName: _firstName,
+      lastName: _lastName,
+      username: _username,
+      email: _email,
+      password: _password,
+      onlineStatus: false,
+      avatarUrl: _avatarUrl,
+    );
 
-      // Mostrar un mensaje de éxito
+    bool success = await addUserToFirestore(newUser);
+    if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Usuario registrado exitosamente')),
       );
-
-      // Limpiar el formulario
-      _formKey.currentState?.reset();
+      
+      Future.delayed(Duration(seconds: 2), () {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => LoginScreen()),
+        );
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Hubo un error al registrar el usuario')),
+      );
     }
+
+    _formKey.currentState?.reset();
   }
+}
 
   @override
   Widget build(BuildContext context) {
+    final Color pageColor = const Color(0xFF8BC1A5);
+    final Color buttonColor = const Color(0xFFA4D1BC);
+
     return Scaffold(
+      backgroundColor: pageColor,
       appBar: AppBar(
-        title: Text('Registrar Usuario'),
+        backgroundColor: buttonColor,
+        title: const Text(
+          'Registrar Usuario',
+          style: TextStyle(color: Colors.white),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextFormField(
-                decoration: InputDecoration(labelText: 'Primer Nombre'),
-                validator: (value) {
-                  if (value?.isEmpty ?? true) {
-                    return 'Por favor, ingresa tu primer nombre';
-                  }
-                  return null;
-                },
-                onSaved: (value) => _firstName = value ?? '',
-              ),
-              TextFormField(
-                decoration: InputDecoration(labelText: 'Apellido'),
-                validator: (value) {
-                  if (value?.isEmpty ?? true) {
-                    return 'Por favor, ingresa tu apellido';
-                  }
-                  return null;
-                },
-                onSaved: (value) => _lastName = value ?? '',
-              ),
-              TextFormField(
-                decoration: InputDecoration(labelText: 'Nombre de Usuario'),
-                validator: (value) {
-                  if (value?.isEmpty ?? true) {
-                    return 'Por favor, ingresa tu nombre de usuario';
-                  }
-                  return null;
-                },
-                onSaved: (value) => _username = value ?? '',
-              ),
-              TextFormField(
-                decoration: InputDecoration(labelText: 'Correo Electrónico'),
-                validator: (value) {
-                  if (value?.isEmpty ?? true) {
-                    return 'Por favor, ingresa tu correo electrónico';
-                  }
-                  return null;
-                },
-                onSaved: (value) => _email = value ?? '',
-              ),
-              TextFormField(
-                decoration: InputDecoration(labelText: 'Contraseña'),
-                obscureText: true,
-                validator: (value) {
-                  if (value?.isEmpty ?? true) {
-                    return 'Por favor, ingresa una contraseña';
-                  }
-                  return null;
-                },
-                onSaved: (value) => _password = value ?? '',
-              ),
-              TextFormField(
-                decoration: InputDecoration(labelText: 'URL del Avatar'),
-                onSaved: (value) => _avatarUrl = value ?? '',
-              ),
-              SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _registerUser,  // Llamada a la función de registro
-                child: Text('Registrar Usuario'),
-              ),
-            ],
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+               _buildTextFormField(
+                  label: 'Nombre',
+                  validator: (value) {
+                    if (value?.isEmpty ?? true) {
+                      return 'Por favor, ingresa tu primer nombre';
+                    }
+                    if (value!.length < 3) {
+                      return 'El primer nombre debe tener al menos 3 caracteres';
+                    }
+                    if (value.length > 50) {
+                      return 'El primer nombre no puede tener más de 50 caracteres';
+                    }
+                    return null;
+                  },
+                  onSaved: (value) => _firstName = value ?? '',
+                ),
+                const SizedBox(height: 16),
+                _buildTextFormField(
+                  label: 'Apellido',
+                  validator: (value) {
+                    if (value?.isEmpty ?? true) {
+                      return 'Por favor, ingresa tu apellido';
+                    }
+                    if (value!.length < 3) {
+                      return 'El apellido debe tener al menos 3 caracteres';
+                    }
+                    if (value.length > 50) {
+                      return 'El apellido no puede tener más de 50 caracteres';
+                    }
+                    return null;
+                  },
+                  onSaved: (value) => _lastName = value ?? '',
+                ),
+                const SizedBox(height: 16),
+                _buildTextFormField(
+                  label: 'Nombre de Usuario',
+                  validator: (value) {
+                    if (value?.isEmpty ?? true) {
+                      return 'Por favor, ingresa tu nombre de usuario';
+                    }
+                    if (value!.length < 3) {
+                      return 'El nombre de usuario debe tener al menos 3 caracteres';
+                    }
+                    if (value.length > 20) {
+                      return 'El nombre de usuario no puede tener más de 20 caracteres';
+                    }
+                    return null;
+                  },
+                  onSaved: (value) => _username = value ?? '',
+                ),
+                const SizedBox(height: 16),
+                _buildTextFormField(
+                  label: 'Correo Electrónico',
+                  validator: (value) {
+                    if (value?.isEmpty ?? true) {
+                      return 'Por favor, ingresa tu correo electrónico';
+                    }
+                    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value!)) {
+                      return 'Por favor, ingresa un correo electrónico válido';
+                    }
+                    if (value.length > 50) {
+                      return 'El correo electrónico no puede tener más de 50 caracteres';
+                    }
+                    return null;
+                  },
+                  onSaved: (value) => _email = value ?? '',
+                ),
+                const SizedBox(height: 16),
+                _buildTextFormField(
+                  label: 'Contraseña',
+                  validator: (value) {
+                    if (value?.isEmpty ?? true) {
+                      return 'Por favor, ingresa una contraseña';
+                    }
+                    if (value!.length < 6) {
+                      return 'La contraseña debe tener al menos 6 caracteres';
+                    }
+                    if (!RegExp(r'^(?=.*[A-Z])(?=.*\d)').hasMatch(value)) {
+                      return 'Debe contener al menos una letra mayúscula y un número';
+                    }
+                    return null;
+                  },
+                  onSaved: (value) => _password = value ?? '',
+                  obscureText: true,
+                ),
+                const SizedBox(height: 16),
+                _buildTextFormField(
+                  label: 'URL del Avatar',
+                  validator: null,
+                  onSaved: (value) => _avatarUrl = value ?? '',
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: _registerUser,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: buttonColor,
+                      foregroundColor: pageColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: pageColor, width: 2),
+                      ),
+                    ),
+                    child: const Text(
+                      'Registrar usuario',
+                      style: TextStyle(fontSize: 18, color: Colors.white),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-     ),
-);
-}
+      ),
+    );
+  }
+
+  Widget _buildTextFormField({
+    required String label,
+    String? Function(String?)? validator,
+    required void Function(String?) onSaved,
+    bool obscureText = false,
+  }) {
+    return TextFormField(
+      style: const TextStyle(color: Colors.white),
+      obscureText: obscureText,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: Colors.white),
+        enabledBorder: OutlineInputBorder(
+          borderSide: const BorderSide(color: Colors.white),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: const BorderSide(color: Colors.white, width: 2),
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+      validator: validator,
+      onSaved: onSaved,
+    );
+  }
 }
