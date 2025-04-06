@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/user.dart';
 import '../services/UserService.dart';
 import 'login_screen.dart'; 
+import 'main_menu_screen.dart';
 
 class UserRegistrationScreen extends StatefulWidget {
   @override
@@ -52,7 +53,7 @@ void _registerUser() async {
       Future.delayed(Duration(seconds: 2), () {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => LoginScreen()),
+          MaterialPageRoute(builder: (context) => ChatListScreen()),
         );
       });
     } else {

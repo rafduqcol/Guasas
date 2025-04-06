@@ -27,7 +27,7 @@ class _AddUsersScreenState extends State<AddUsersScreen> {
     try {
       // Crear el chat con los usuarios
       await chatRef.set({
-        'user1Id': 1743956591992, // Usar el uid actual del usuario
+        'user1Id': currentUser!.uid, // Usar el uid actual del usuario
         'user2Id': userId,
         'creationDate': FieldValue.serverTimestamp(),
         'messages': [],
