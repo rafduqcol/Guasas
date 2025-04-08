@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/UserService.dart';
 import '../models/user.dart' as custom_user;
 import 'login_screen.dart';
+import 'main_menu_screen.dart';
 
 class UserRegistrationScreen extends StatefulWidget {
   @override
@@ -15,18 +16,28 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
   String _username = '';
   String _email = '';
   String _password = '';
+  String _confirmPassword = ''; // Added for confirm password
   String _avatarUrl = '';
 
-  final UserService _userService = UserService();
+  bool _isPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
+
+final UserService _userService = UserService();
+final TextEditingController _passwordController = TextEditingController();
+final TextEditingController _confirmPasswordController = TextEditingController();
+
 
   Widget _buildTextFormField({
     required String label,
     required Function(String?) onSaved,
     String? Function(String?)? validator,
     bool obscureText = false,
+    IconButton? suffixIcon,
+    TextEditingController? controller,
   }) {
     return TextFormField(
       style: const TextStyle(color: Colors.white),
+      controller: controller,
       obscureText: obscureText,
       decoration: InputDecoration(
         labelText: label,
@@ -39,6 +50,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
           borderSide: const BorderSide(color: Colors.white, width: 2),
           borderRadius: BorderRadius.circular(12),
         ),
+        suffixIcon: suffixIcon, // Using the suffixIcon parameter here
       ),
       validator: validator,
       onSaved: onSaved,
@@ -77,6 +89,28 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
           SnackBar(content: Text(result)),
         );
       }
+    }
+  }
+
+
+  void _loginWithGoogle() async {
+    String? result = await _userService.signInWithGoogle();
+
+    if (result == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Inicio de sesión con Google exitoso')),
+      );
+
+      Future.delayed(Duration(seconds: 2), () {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => ChatListScreen()),
+        );
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result)),
+      );
     }
   }
 
@@ -169,6 +203,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
                 const SizedBox(height: 16),
                 _buildTextFormField(
                   label: 'Contraseña',
+                  controller: _passwordController, 
                   validator: (value) {
                     if (value?.isEmpty ?? true) {
                       return 'Por favor, ingresa una contraseña';
@@ -182,7 +217,47 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
                     return null;
                   },
                   onSaved: (value) => _password = value ?? '',
-                  obscureText: true,
+                  obscureText: !_isPasswordVisible,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _isPasswordVisible ? Icons.visibility_off : Icons.visibility,
+                      color: Colors.white,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _isPasswordVisible = !_isPasswordVisible;
+                      });
+                    },
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+                _buildTextFormField(
+                  label: 'Confirmar Contraseña',
+                  controller: _confirmPasswordController, 
+                  validator: (value) {
+                    if (value?.isEmpty ?? true) {
+                      return 'Por favor, confirma tu contraseña';
+                    }
+                    if (_passwordController.text != value) { 
+                      print("Contraseña: ${_passwordController.text} Confirmar Contraseña: $value");
+                      return 'Las contraseñas no coinciden';
+                    }
+                    return null;
+                  },
+                  onSaved: (value) => _confirmPassword = value ?? '',
+                  obscureText: !_isConfirmPasswordVisible,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _isConfirmPasswordVisible ? Icons.visibility_off : Icons.visibility,
+                      color: Colors.white,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+                      });
+                    },
+                  ),
                 ),
                 const SizedBox(height: 16),
                 _buildTextFormField(
@@ -191,6 +266,27 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
                   onSaved: (value) => _avatarUrl = value ?? '',
                 ),
                 const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    onPressed: _loginWithGoogle,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: Colors.black),
+                      ),
+                    ),
+                    icon: Image.asset(
+                      'assets/images/google_icon.png',
+                      height: 24,
+                    ),
+                    label: const Text('Continuar con Google'),
+                  ),
+                ),
+                const SizedBox(height: 10),
                 SizedBox(
                   width: double.infinity,
                   height: 50,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../services/UserService.dart'; // Asegúrate de importar el servicio correctamente.
-import 'main_menu_screen.dart'; // Asegúrate de importar la pantalla de lista de chats.
+import '../services/UserService.dart';
+import 'main_menu_screen.dart';
+
 class LoginScreen extends StatefulWidget {
   @override
   _LoginScreenState createState() => _LoginScreenState();
@@ -11,35 +12,51 @@ class _LoginScreenState extends State<LoginScreen> {
   String _email = '';
   String _password = '';
 
-  final UserService _userService = UserService(); // Crear una instancia de UserService
+  final UserService _userService = UserService();
 
   void _login() async {
     if (_formKey.currentState?.validate() ?? false) {
       _formKey.currentState?.save();
 
-      // Llamar al servicio de login
       String? result = await _userService.loginWithEmailPassword(_email, _password);
 
       if (result == null) {
-        // Inicio de sesión exitoso
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Inicio de sesión exitoso')),
         );
 
-         Future.delayed(Duration(seconds: 2), () {
+        Future.delayed(Duration(seconds: 2), () {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => ChatListScreen()),
           );
         });
-
-        // Navegar a la siguiente pantalla o realizar cualquier acción adicional
       } else {
-        // Error en el inicio de sesión
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result)), // Mostrar el mensaje de error
+          SnackBar(content: Text(result)),
         );
       }
+    }
+  }
+
+  void _loginWithGoogle() async {
+    String? result = await _userService.signInWithGoogle();
+
+    if (result == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Inicio de sesión con Google exitoso')),
+      );
+
+      Future.delayed(Duration(seconds: 2), () {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => ChatListScreen()),
+        );
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result)),
+      );
     }
   }
 
@@ -104,7 +121,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: _login, // Llamar a la función de login
+                    onPressed: _login,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: buttonColor,
                       foregroundColor: pageColor,
@@ -117,6 +134,27 @@ class _LoginScreenState extends State<LoginScreen> {
                       'Iniciar Sesión',
                       style: TextStyle(fontSize: 18, color: Colors.white),
                     ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    onPressed: _loginWithGoogle,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: Colors.black),
+                      ),
+                    ),
+                    icon: Image.asset(
+                      'assets/images/google_icon.png',
+                      height: 24,
+                    ),
+                    label: const Text('Continuar con Google'),
                   ),
                 ),
               ],
