@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/UserService.dart';
 import 'main_menu_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -11,7 +12,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   String _email = '';
   String _password = '';
-
   final UserService _userService = UserService();
 
   void _login() async {
@@ -21,6 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
       String? result = await _userService.loginWithEmailPassword(_email, _password);
 
       if (result == null) {
+        await _userService.saveLoginState(); 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Inicio de sesión exitoso')),
         );
@@ -43,6 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
     String? result = await _userService.signInWithGoogle();
 
     if (result == null) {
+      await _userService.saveLoginState(); 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Inicio de sesión con Google exitoso')),
       );
@@ -121,7 +123,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: _login,
+                    onPressed: _loginWithGoogle,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: buttonColor,
                       foregroundColor: pageColor,

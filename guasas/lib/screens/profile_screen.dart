@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io'; // Para manejar las imágenes seleccionadas
-import 'package:firebase_storage/firebase_storage.dart'; // Para usar Firebase Storage
+import 'dart:io'; 
+import 'package:firebase_storage/firebase_storage.dart'; 
 import '../models/user.dart' as custom_user;
+import '../services/UserService.dart'; 
+import 'login_screen.dart'; 
+
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -14,12 +17,13 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   int _selectedIndex = 2;
   late custom_user.User currentUser;
+  final UserService _userService = UserService();
 
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _firstNameController;
   late TextEditingController _lastNameController;
   late TextEditingController _usernameController;
-  File? _avatarImage; // Cambiar aquí a File? para permitir que sea null
+  File? _avatarImage; 
 
   final ImagePicker _picker = ImagePicker();
 
@@ -70,18 +74,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // Función para guardar los datos
   Future<void> _saveProfile() async {
     if (_formKey.currentState!.validate()) {
-      // Actualiza los datos en Firestore
       await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).update({
         'firstName': _firstNameController.text,
         'lastName': _lastNameController.text,
         'username': _usernameController.text,
-        // Aquí agregamos la URL del avatar si el usuario ha seleccionado una nueva imagen
         if (_avatarImage != null) 'avatarUrl': await _uploadAvatarImage(),
       });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Perfil actualizado')));
     }
   }
 
+void _logout() async {
+  await _userService.signOut();
+
+  // Redirigir a la pantalla de inicio de sesión
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text('Cierre de sesión exitoso')),
+  );
+
+  // Espera 2 segundos antes de redirigir
+  Future.delayed(Duration(seconds: 2), () {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => LoginScreen()),
+    );
+  });
+}
   // Función para subir la imagen del avatar
   Future<String> _uploadAvatarImage() async {
     // Usa Firebase Storage para subir la imagen (esto es solo un ejemplo)
@@ -162,6 +180,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       backgroundColor: pageColor,
       appBar: AppBar(
         title: const Text('Editar Perfil'),
+        automaticallyImplyLeading: false,
         backgroundColor: Colors.blueAccent,
       ),
       body: currentUser == null
@@ -276,6 +295,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         child: const Text(
                           'Guardar Cambios',
+                          style: TextStyle(fontSize: 18, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                     SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: _logout,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: buttonColor, 
+                          foregroundColor: pageColor, 
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(color: pageColor, width: 2),
+                          ),
+                        ),
+                        child: const Text(
+                          'Cerrar sesión',
                           style: TextStyle(fontSize: 18, color: Colors.white),
                         ),
                       ),
