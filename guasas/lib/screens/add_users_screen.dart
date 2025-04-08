@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'profile_screen.dart';
-import 'main_menu_screen.dart';
 
 class AddUsersScreen extends StatefulWidget {
   const AddUsersScreen({Key? key}) : super(key: key);
@@ -13,7 +11,7 @@ class AddUsersScreen extends StatefulWidget {
 
 class _AddUsersScreenState extends State<AddUsersScreen> {
   final currentUser = FirebaseAuth.instance.currentUser;
-  int _selectedIndex = 1; // Indicamos que estamos en la pantalla de agregar usuarios.
+  int _selectedIndex = 1; // Pantalla actual: Agregar Usuarios.
 
   final List<String> _navOptions = ['Listar Chats', 'Agregar Usuarios', 'Perfil'];
 
@@ -27,17 +25,37 @@ class _AddUsersScreenState extends State<AddUsersScreen> {
         Navigator.pushNamed(context, '/chatList');
         break;
       case 1:
-        break; 
+        break;
       case 2:
         Navigator.pushNamed(context, '/profile');
         break;
     }
   }
 
+  // Comprobar si ya existe un chat entre los dos usuarios
+  Future<String?> checkIfChatExists(String userId) async {
+    final chatsRef = FirebaseFirestore.instance.collection('chats');
+    final existingChats = await chatsRef
+        .where('user1Id', whereIn: [currentUser!.uid, userId])
+        .get();
+
+    for (var doc in existingChats.docs) {
+      final data = doc.data();
+      final user1 = data['user1Id'];
+      final user2 = data['user2Id'];
+
+      if ((user1 == currentUser!.uid && user2 == userId) ||
+          (user1 == userId && user2 == currentUser!.uid)) {
+        return doc.id; // Ya existe el chat, devolvemos el ID
+      }
+    }
+    return null; // No existe el chat
+  }
+
   // Crear un chat con el usuario seleccionado
   Future<void> createChatWithUser(String userId) async {
     if (currentUser == null || currentUser!.uid.isEmpty) {
-      print('No hay usuario actual o el UID está vacío. No se puede crear el chat.');
+      print('No hay usuario actual. No se puede crear el chat.');
       return;
     }
 
@@ -46,25 +64,30 @@ class _AddUsersScreenState extends State<AddUsersScreen> {
       return;
     }
 
-    // Crear chat en Firestore
+    final existingChatId = await checkIfChatExists(userId);
+
+    if (existingChatId != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Ya tienes un chat con este usuario.'),
+          duration: Duration(seconds: 1), // <- Aquí ajustas el tiempo
+        ),
+      );
+      return;
+    }
+
     final chatRef = FirebaseFirestore.instance.collection('chats').doc();
     final chatId = chatRef.id;
 
-    print('Creando chat con ID: $chatId para los usuarios: ${currentUser!.uid} y $userId');
-
     try {
-      // Crear el chat con los usuarios
       await chatRef.set({
-        'user1Id': currentUser!.uid, // Usar el uid actual del usuario
+        'user1Id': currentUser!.uid,
         'user2Id': userId,
         'creationDate': FieldValue.serverTimestamp(),
         'messages': [],
       });
 
-      // Imprimir en consola para verificar que el chat se ha creado
       print('Chat creado con ID: $chatId');
-      
-      // Navegar a la pantalla del chat
       Navigator.pushNamed(context, '/chatDetail', arguments: chatId);
     } catch (e) {
       print('Error creando el chat: $e');
@@ -74,11 +97,14 @@ class _AddUsersScreenState extends State<AddUsersScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFD6F0E9), // Fondo general
       appBar: AppBar(
         title: const Text('Agregar Usuario'),
+        automaticallyImplyLeading: false,
+        backgroundColor: const Color(0xFF8BC1A5), // Color personalizado
       ),
       body: currentUser == null
-          ? const Center(child: Text('No estás logueado. Por favor, inicia sesión.'))
+          ? const Center(child: Text('No estás logueado.'))
           : StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance.collection('users').snapshots(),
               builder: (context, snapshot) {
@@ -98,23 +124,39 @@ class _AddUsersScreenState extends State<AddUsersScreen> {
                     final userId = user['uid'];
                     final username = user['username'];
 
-                    // Evitar que el usuario actual vea su propio nombre
-                    if (userId == currentUser?.uid) {
-                      return SizedBox();  // No mostrar su propio nombre
-                    }
+                    if (userId == currentUser?.uid) return const SizedBox.shrink();
 
-                    return ListTile(
-                      title: Text(username),
-                      onTap: () {
-                        print('Usuario seleccionado: $username');
-                        createChatWithUser(userId);
-                      },
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFFFFF), // Fondo de cada item
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.2),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      child: ListTile(
+                        title: Text(
+                          username,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        onTap: () {
+                          createChatWithUser(userId);
+                        },
+                      ),
                     );
                   },
                 );
               },
             ),
       bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: const Color(0xFF8BC1A5),
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.white60,
         currentIndex: _selectedIndex,
         onTap: _onNavItemTapped,
         items: const [
