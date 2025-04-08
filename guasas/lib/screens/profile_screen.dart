@@ -7,7 +7,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import '../models/user.dart' as custom_user;
 import '../services/UserService.dart'; 
 import 'login_screen.dart'; 
-
+import 'home.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -66,7 +66,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
       setState(() {
-        _avatarImage = File(image.path); // Asignamos la imagen seleccionada
+        _avatarImage = File(image.path); 
       });
     }
   }
@@ -96,7 +96,7 @@ void _logout() async {
   Future.delayed(Duration(seconds: 2), () {
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => LoginScreen()),
+      MaterialPageRoute(builder: (context) => HomeScreen()),
     );
   });
 }

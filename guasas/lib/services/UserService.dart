@@ -31,16 +31,58 @@ class UserService {
         'isGoogleUser': false,
       });
  
-      return null;  // Registro exitoso
+      return null;  
     } catch (e) {
-      return e.toString();  // En caso de error
+      return e.toString();  
     }
   }
 
-  // Función para login con email y contraseña
+    
+ Future<String?> registerUserWithGoogle(custom_user.User user) async {
+  try {
+    final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+    if (googleUser == null) {
+      return 'El inicio de sesión con Google fue cancelado.';
+    }
+
+    final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+    final OAuthCredential credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
+
+    UserCredential userCredential = await _auth.signInWithCredential(credential);
+
+    User? userFirebase = userCredential.user;
+
+    if (userFirebase != null) {
+      // Verifica si el usuario ya existe en Firestore
+      DocumentSnapshot userDoc = await _firestore.collection('users').doc(userFirebase.uid).get();
+
+      if (userDoc.exists) {
+        return 'Este correo electrónico ya está registrado con Google.';
+      } else {
+        await _firestore.collection('users').doc(userFirebase.uid).set({
+          'uid': userFirebase.uid,
+          'firstName': user.firstName,
+          'lastName': user.lastName,
+          'username': user.username,
+          'email': user.email,
+          'avatarUrl': user.avatarUrl ?? '', 
+          'isGoogleUser': true,
+        });
+      }
+    }
+
+    return null;  
+  } catch (e) {
+    return 'Error al registrar con Google: $e';  
+  }
+}
+
   Future<String?> loginWithEmailPassword(String email, String password) async {
     try {
-      // Verificar si el correo electrónico existe en Firestore
       final userSnapshot = await _firestore
           .collection('users')
           .where('email', isEqualTo: email)
@@ -57,12 +99,11 @@ class UserService {
       bool passwordMatch = await BCrypt.checkpw(password, storedHashedPassword);
 
       if (passwordMatch) {
-        // Iniciar sesión con las credenciales
         await _auth.signInWithEmailAndPassword(
           email: email,
           password: password,
         );
-        return null;  // Login exitoso
+        return null; 
       } else {
         return 'Contraseña incorrecta';
       }
