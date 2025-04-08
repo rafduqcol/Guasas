@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/UserService.dart';
 import 'main_menu_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -11,18 +13,47 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   String _email = '';
   String _password = '';
-
   final UserService _userService = UserService();
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
-  void _login() async {
-    if (_formKey.currentState?.validate() ?? false) {
-      _formKey.currentState?.save();
 
-      String? result = await _userService.loginWithEmailPassword(_email, _password);
+void _login() async {
+  if (_formKey.currentState?.validate() ?? false) {
+    _formKey.currentState?.save();
 
+    String? result = await _userService.loginWithEmailPassword(_email, _password);
+
+    if (result == null) {
+      await _userService.saveLoginState(); 
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Inicio de sesión exitoso')),
+      );
+
+      Future.delayed(Duration(seconds: 2), () {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => ChatListScreen()),
+        );
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result)),
+      );
+    }
+  }
+}
+
+  void _loginWithGoogle() async {
+    String? result = await _userService.signInWithGoogle();
+    try {
+      await _googleSignIn.signOut(); 
+      GoogleSignInAccount? googleUser = await _googleSignIn.signInSilently();
+  
       if (result == null) {
+        await _userService.saveLoginState(); 
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Inicio de sesión exitoso')),
+          SnackBar(content: Text('Inicio de sesión con Google exitoso')),
         );
 
         Future.delayed(Duration(seconds: 2), () {
@@ -36,26 +67,9 @@ class _LoginScreenState extends State<LoginScreen> {
           SnackBar(content: Text(result)),
         );
       }
-    }
-  }
-
-  void _loginWithGoogle() async {
-    String? result = await _userService.signInWithGoogle();
-
-    if (result == null) {
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Inicio de sesión con Google exitoso')),
-      );
-
-      Future.delayed(Duration(seconds: 2), () {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => ChatListScreen()),
-        );
-      });
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result)),
+        SnackBar(content: Text('Error al iniciar sesión con Google: $e')),
       );
     }
   }
@@ -121,7 +135,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: _login,
+                    onPressed: _loginWithGoogle,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: buttonColor,
                       foregroundColor: pageColor,

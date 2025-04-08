@@ -3,6 +3,7 @@ import '../services/UserService.dart';
 import '../models/user.dart' as custom_user;
 import 'login_screen.dart';
 import 'main_menu_screen.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class UserRegistrationScreen extends StatefulWidget {
   @override
@@ -16,7 +17,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
   String _username = '';
   String _email = '';
   String _password = '';
-  String _confirmPassword = ''; // Added for confirm password
+  String _confirmPassword = ''; 
   String _avatarUrl = '';
 
   bool _isPasswordVisible = false;
@@ -26,8 +27,10 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
 
-  // Flag to simulate whether the user is a Google user or not
-  bool isGoogleUser = false;  // Set this flag based on your logic or user data
+  bool isGoogleUser = false;  
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
+
+
 
   Widget _buildTextFormField({
     required String label,
@@ -52,7 +55,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
           borderSide: const BorderSide(color: Colors.white, width: 2),
           borderRadius: BorderRadius.circular(12),
         ),
-        suffixIcon: suffixIcon, // Using the suffixIcon parameter here
+        suffixIcon: suffixIcon, 
       ),
       validator: validator,
       onSaved: onSaved,
@@ -60,7 +63,6 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
   }
 
   void _register() async {
-    print("Iniciando el registro del usuario...");
     if (_formKey.currentState?.validate() ?? false) {
       _formKey.currentState?.save();
       custom_user.User newUser = custom_user.User(
@@ -69,8 +71,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
         username: _username,
         email: _email,
         password: _password,
-        avatarUrl: _avatarUrl,
-        isGoogleUser: isGoogleUser,  // Add this to store Google user status
+        isGoogleUser: isGoogleUser,  
       );
 
       String? result = await _userService.registerUser(newUser);
@@ -94,36 +95,58 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
       }
     }
   }
+  
+ void _registerWithGoogle() async {
+    try {
 
-  void _loginWithGoogle() async {
-    String? result = await _userService.signInWithGoogle();
+      await _googleSignIn.signOut();
+      GoogleSignInAccount? googleUser = await _googleSignIn.signInSilently();
 
-    if (result == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Inicio de sesión con Google exitoso')),
+      if (googleUser == null) {
+        googleUser = await _googleSignIn.signIn();
+        if (googleUser == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Inicio de sesión cancelado')),
+          );
+          return;
+        }
+      }
+
+      GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+      custom_user.User newUser = custom_user.User(
+        firstName: googleUser.displayName?.split(" ")[0] ?? '',
+        lastName: googleUser.displayName?.split(" ").skip(1).join(" ") ?? '',
+        username: googleUser.displayName ?? '',
+        email: googleUser.email,
+        password: "",  
+        isGoogleUser: true,
       );
 
-      setState(() {
-        isGoogleUser = true;  // After successful Google login, mark as Google user
-      });
+      String? result = await _userService.registerUserWithGoogle(newUser);
 
-      Future.delayed(Duration(seconds: 2), () {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => ChatListScreen()),
+      if (result == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Usuario registrado con éxito')),
         );
-      });
-    } else {
+        Future.delayed(Duration(seconds: 2), () {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => LoginScreen()),
+          );
+        });
+      } else {
+        print("error: $result");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result)),
+        );
+      }
+    } catch (e) {
+      print("Error al iniciar sesión con Google: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result)),
+        SnackBar(content: Text('Hubo un error al registrar con Google')),
       );
     }
-  }
-
-  void _changePassword() {
-    // Implement the logic to allow the user to change the password.
-    // You can open a new screen or show a dialog to enter the new password.
-    print("Cambiar contraseña");
   }
 
   @override
@@ -272,12 +295,6 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                _buildTextFormField(
-                  label: 'URL del Avatar',
-                  validator: null,
-                  onSaved: (value) => _avatarUrl = value ?? '',
-                ),
-                const SizedBox(height: 20),               
                 SizedBox(
                   width: double.infinity,
                   height: 50,
@@ -302,7 +319,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton.icon(
-                    onPressed: _loginWithGoogle,
+                    onPressed: _registerWithGoogle,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: Colors.black,

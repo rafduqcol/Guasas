@@ -15,7 +15,7 @@ class User {
     required this.username,
     required this.email,
     required this.password,
-    required this.avatarUrl,
+    this.avatarUrl = '',
     this.isGoogleUser = false,
   });
 
