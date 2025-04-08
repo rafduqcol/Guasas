@@ -22,10 +22,12 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
 
-final UserService _userService = UserService();
-final TextEditingController _passwordController = TextEditingController();
-final TextEditingController _confirmPasswordController = TextEditingController();
+  final UserService _userService = UserService();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
 
+  // Flag to simulate whether the user is a Google user or not
+  bool isGoogleUser = false;  // Set this flag based on your logic or user data
 
   Widget _buildTextFormField({
     required String label,
@@ -68,6 +70,7 @@ final TextEditingController _confirmPasswordController = TextEditingController()
         email: _email,
         password: _password,
         avatarUrl: _avatarUrl,
+        isGoogleUser: isGoogleUser,  // Add this to store Google user status
       );
 
       String? result = await _userService.registerUser(newUser);
@@ -92,7 +95,6 @@ final TextEditingController _confirmPasswordController = TextEditingController()
     }
   }
 
-
   void _loginWithGoogle() async {
     String? result = await _userService.signInWithGoogle();
 
@@ -100,6 +102,10 @@ final TextEditingController _confirmPasswordController = TextEditingController()
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Inicio de sesión con Google exitoso')),
       );
+
+      setState(() {
+        isGoogleUser = true;  // After successful Google login, mark as Google user
+      });
 
       Future.delayed(Duration(seconds: 2), () {
         Navigator.pushReplacement(
@@ -112,6 +118,12 @@ final TextEditingController _confirmPasswordController = TextEditingController()
         SnackBar(content: Text(result)),
       );
     }
+  }
+
+  void _changePassword() {
+    // Implement the logic to allow the user to change the password.
+    // You can open a new screen or show a dialog to enter the new password.
+    print("Cambiar contraseña");
   }
 
   @override
@@ -136,6 +148,23 @@ final TextEditingController _confirmPasswordController = TextEditingController()
             key: _formKey,
             child: Column(
               children: [
+                      _buildTextFormField(
+                  label: 'Nombre de Usuario',
+                  validator: (value) {
+                    if (value?.isEmpty ?? true) {
+                      return 'Por favor, ingresa tu nombre de usuario';
+                    }
+                    if (value!.length < 3) {
+                      return 'El nombre de usuario debe tener al menos 3 caracteres';
+                    }
+                    if (value.length > 20) {
+                      return 'El nombre de usuario no puede tener más de 20 caracteres';
+                    }
+                    return null;
+                  },
+                  onSaved: (value) => _username = value ?? '',
+                ),
+                const SizedBox(height: 16),
                 _buildTextFormField(
                   label: 'Nombre',
                   validator: (value) {
@@ -154,37 +183,20 @@ final TextEditingController _confirmPasswordController = TextEditingController()
                 ),
                 const SizedBox(height: 16),
                 _buildTextFormField(
-                  label: 'Apellido',
+                  label: 'Apellidos',
                   validator: (value) {
                     if (value?.isEmpty ?? true) {
-                      return 'Por favor, ingresa tu apellido';
+                      return 'Por favor, ingresa tus apellidos';
                     }
                     if (value!.length < 3) {
-                      return 'El apellido debe tener al menos 3 caracteres';
+                      return 'Los apellidos deben tener al menos 3 caracteres';
                     }
                     if (value.length > 50) {
-                      return 'El apellido no puede tener más de 50 caracteres';
+                      return 'Los apellidos no pueden tener más de 50 caracteres';
                     }
                     return null;
                   },
                   onSaved: (value) => _lastName = value ?? '',
-                ),
-                const SizedBox(height: 16),
-                _buildTextFormField(
-                  label: 'Nombre de Usuario',
-                  validator: (value) {
-                    if (value?.isEmpty ?? true) {
-                      return 'Por favor, ingresa tu nombre de usuario';
-                    }
-                    if (value!.length < 3) {
-                      return 'El nombre de usuario debe tener al menos 3 caracteres';
-                    }
-                    if (value.length > 20) {
-                      return 'El nombre de usuario no puede tener más de 20 caracteres';
-                    }
-                    return null;
-                  },
-                  onSaved: (value) => _username = value ?? '',
                 ),
                 const SizedBox(height: 16),
                 _buildTextFormField(
@@ -265,7 +277,27 @@ final TextEditingController _confirmPasswordController = TextEditingController()
                   validator: null,
                   onSaved: (value) => _avatarUrl = value ?? '',
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 20),               
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: _register,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: buttonColor,
+                      foregroundColor: pageColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: pageColor, width: 2),
+                      ),
+                    ),
+                    child: const Text(
+                      'Registrar',
+                      style: TextStyle(fontSize: 18, color: Colors.white),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
                 SizedBox(
                   width: double.infinity,
                   height: 50,
@@ -284,26 +316,6 @@ final TextEditingController _confirmPasswordController = TextEditingController()
                       height: 24,
                     ),
                     label: const Text('Continuar con Google'),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _register,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: buttonColor,
-                      foregroundColor: pageColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: pageColor, width: 2),
-                      ),
-                    ),
-                    child: const Text(
-                      'Registrar',
-                      style: TextStyle(fontSize: 18, color: Colors.white),
-                    ),
                   ),
                 ),
               ],

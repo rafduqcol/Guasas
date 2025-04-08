@@ -6,6 +6,7 @@ class User {
   String email;
   String password;
   String avatarUrl;
+  bool isGoogleUser;
 
   User({
     this.uid = '',
@@ -15,6 +16,7 @@ class User {
     required this.email,
     required this.password,
     required this.avatarUrl,
+    this.isGoogleUser = false,
   });
 
 
@@ -28,6 +30,7 @@ class User {
       'email': email,
       'password': password,
       'avatarUrl': avatarUrl,
+      'isGoogleUser': isGoogleUser,
     };
   }
     // Método para convertir un Map a un objeto User
@@ -40,6 +43,7 @@ class User {
       email: map['email'] ?? '',
       password: map['password'] ?? '',
       avatarUrl: map['avatarUrl'] ?? '',
+      isGoogleUser: map['isGoogleUser'] ?? 'false',
     );
   }
 

@@ -27,6 +27,7 @@ class UserService {
         'email': user.email,
         'password': BCrypt.hashpw(user.password, BCrypt.gensalt()), 
         'avatarUrl': user.avatarUrl,
+        'isGoogleUser': false,
       });
  
       return null;  // Registro exitoso
@@ -69,10 +70,8 @@ class UserService {
     }
   }
 
-  // Función para iniciar sesión con Google
   Future<String?> signInWithGoogle() async {
     try {
-      // Autenticación con Google
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
         return 'El inicio de sesión con Google fue cancelado.';
@@ -80,24 +79,19 @@ class UserService {
 
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
-      // Crear las credenciales de Google
       final OAuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      // Iniciar sesión con las credenciales de Google
       UserCredential userCredential = await _auth.signInWithCredential(credential);
 
-      // Obtener los datos del usuario
       User? user = userCredential.user;
 
       if (user != null) {
-        // Verificar si el usuario ya existe en Firestore
         DocumentSnapshot userDoc = await _firestore.collection('users').doc(user.uid).get();
 
         if (!userDoc.exists) {
-          // Si no existe, crearlo en Firestore
           await _firestore.collection('users').doc(user.uid).set({
             'uid': user.uid,
             'firstName': user.displayName?.split(" ")[0] ?? '',
@@ -107,14 +101,29 @@ class UserService {
             'email': user.email,
             'avatarUrl': user.photoURL ?? '',
             'username': user.displayName?.toLowerCase() ?? '',
+            'isGoogleUser': true,
           });
         }
       }
 
-      return null;  // Inicio de sesión con Google exitoso
+      return null;  
     } catch (e) {
       print("Error al iniciar sesión con Google: $e");
-      return e.toString();  // Devolver el error si ocurre alguno
+      return e.toString();  
     }
+  }
+
+
+  // Obtener el usuario actual
+  Future<custom_user.User?> getCurrentUser() async {
+    print('Obteniendo usuario actual...');
+    User? firebaseUser = _auth.currentUser;
+    if (firebaseUser != null) {
+      DocumentSnapshot userDoc = await _firestore.collection('users').doc(firebaseUser.uid).get();
+      if (userDoc.exists) {
+        return custom_user.User.fromMap(userDoc.data() as Map<String, dynamic>);
+      }
+    }
+    return null;  // No hay usuario logueado
   }
 }
