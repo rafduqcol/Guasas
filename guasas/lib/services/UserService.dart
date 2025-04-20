@@ -4,11 +4,17 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user.dart' as custom_user;
 import 'package:bcrypt/bcrypt.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:image/image.dart' as img;
+import 'package:firebase_core/firebase_core.dart'; 
 
 class UserService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final FirebaseStorage _storage = FirebaseStorage.instance;
 
 Future<String?> registerUser(custom_user.User user) async {
   try {
@@ -60,7 +66,6 @@ Future<String?> registerUser(custom_user.User user) async {
     User? userFirebase = userCredential.user;
 
     if (userFirebase != null) {
-      // Verifica si el usuario ya existe en Firestore
       DocumentSnapshot userDoc = await _firestore.collection('users').doc(userFirebase.uid).get();
 
       if (userDoc.exists) {
@@ -163,13 +168,11 @@ Future<String?> registerUser(custom_user.User user) async {
     await prefs.setBool('isLogged', true);
   }
 
-  // Función para cerrar sesión
   Future<void> signOut() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isLogged', false);
   }
 
-  // Obtener el usuario actual
   Future<custom_user.User?> getCurrentUser() async {
     print('Obteniendo usuario actual...');
     User? firebaseUser = _auth.currentUser;
@@ -179,6 +182,24 @@ Future<String?> registerUser(custom_user.User user) async {
         return custom_user.User.fromMap(userDoc.data() as Map<String, dynamic>);
       }
     }
-    return null;  // No hay usuario logueado
+    return null;  
+  }
+
+
+
+Future<void> updateUserProfile(String uid, String firstName, String lastName, String username) async {
+  try {
+    String? avatarUrl;
+   
+
+    await _firestore.collection('users').doc(uid).update({
+      'firstName': firstName,
+      'lastName': lastName,
+      'username': username,
+    });
+  } catch (e) {
+    print("Error al actualizar el perfil: $e");
   }
 }
+}
+

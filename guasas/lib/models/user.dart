@@ -19,6 +19,29 @@ class User {
     this.isGoogleUser = false,
   });
 
+  User copyWith ({
+    String? uid,
+    String? firstName,
+    String? lastName,
+    String? username,
+    String? email,
+    String? password,
+    String? avatarUrl,
+    bool? isGoogleUser,
+  }) {
+    return User(
+      uid: uid ?? this.uid,
+      firstName: firstName ?? this.firstName,
+      lastName: lastName ?? this.lastName,
+      username: username ?? this.username,
+      email: email ?? this.email,
+      password: password ?? this.password,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      isGoogleUser: isGoogleUser ?? this.isGoogleUser,
+    );
+  }
+  
+
 
   // Método para convertir un objeto User a un Map
   Map<String, dynamic> toMap() {

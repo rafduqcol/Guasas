@@ -24,7 +24,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
     switch (index) {
       case 0:
-        // Ya estás en esta pantalla
         break;
       case 1:
         Navigator.pushNamed(context, '/addUsers');
@@ -46,11 +45,11 @@ class _ChatListScreenState extends State<ChatListScreen> {
     final currentUserId = _auth.currentUser?.uid;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFD6F0E9), // ← tu color de fondo general
+      backgroundColor: const Color(0xFFD6F0E9),
       appBar: AppBar(
         title: const Text('Mis Chats'),
         automaticallyImplyLeading: false,
-        backgroundColor: const Color(0xFF8BC1A5), // ← Tu color personalizado
+        backgroundColor: const Color(0xFF8BC1A5), 
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: _firestore

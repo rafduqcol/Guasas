@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io'; 
-import 'package:firebase_storage/firebase_storage.dart'; 
+import 'dart:io';
 import '../models/user.dart' as custom_user;
-import '../services/UserService.dart'; 
-import 'login_screen.dart'; 
+import '../services/UserService.dart';
 import 'home.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -16,14 +13,13 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   int _selectedIndex = 2;
-  late custom_user.User currentUser;
-  final UserService _userService = UserService();
-
+  custom_user.User? currentUser;
+  final UserService _userService = UserService();  
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _firstNameController;
   late TextEditingController _lastNameController;
   late TextEditingController _usernameController;
-  File? _avatarImage; 
+  File? _avatarImage;
 
   final ImagePicker _picker = ImagePicker();
 
@@ -36,138 +32,134 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadUserData();
   }
 
-  Future<void> _loadUserData() async {
-    custom_user.User? user = await getCurrentUser();
-    if (user != null) {
-      setState(() {
-        currentUser = user;
-        _firstNameController.text = user.firstName ?? '';
-        _lastNameController.text = user.lastName ?? '';
-        _usernameController.text = user.username ?? '';
-      });
-    }
-  }
-
-  Future<custom_user.User?> getCurrentUser() async {
-    User? firebaseUser = FirebaseAuth.instance.currentUser;
-    if (firebaseUser != null) {
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(firebaseUser.uid).get();
-      if (userDoc.exists) {
-        return custom_user.User.fromMap(userDoc.data() as Map<String, dynamic>);
-      }
-    }
-    return null;
-  }
-
-  Future<void> _pickImage() async {
-  final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-  if (image != null && image.path.isNotEmpty) {
+   void _onNavItemTapped(int index) {
     setState(() {
-      _avatarImage = File(image.path);
+      _selectedIndex = index;
     });
-  } else {
-    print('No se seleccionó ninguna imagen o el path está vacío');
-  }
-}
 
+    switch (index) {
+      case 0:
+        Navigator.pushNamed(context, '/chatList');
+        break;
+      case 1:
+        Navigator.pushNamed(context, '/addUsers');
+      case 2:
+        break;
+    }
+  }
+
+  Future<void> _loadUserData() async {
+    custom_user.User? user = await _userService.getCurrentUser();  
+    setState(() {
+      currentUser = user;
+      _firstNameController.text = user?.firstName ?? '';
+      _lastNameController.text = user?.lastName ?? '';
+      _usernameController.text = user?.username ?? '';
+    });
+  }
 
   Future<void> _saveProfile() async {
     if (_formKey.currentState!.validate()) {
-      await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).update({
-        'firstName': _firstNameController.text,
-        'lastName': _lastNameController.text,
-        'username': _usernameController.text,
-        if (_avatarImage != null) 'avatarUrl': await _uploadAvatarImage(),
-      });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Perfil actualizado')));
+      try {
+        await _userService.updateUserProfile(
+          currentUser!.uid,
+          _firstNameController.text,
+          _lastNameController.text,
+          _usernameController.text,
+        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Perfil actualizado')));
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al actualizar el perfil')));
+      }
     }
   }
 
-void _logout() async {
-  await _userService.signOut();
-
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text('Cierre de sesión exitoso')),
-  );
-
-  Future.delayed(Duration(seconds: 2), () {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => HomeScreen()),
-    );
-  });
-}
-  Future<String> _uploadAvatarImage() async {
-    String path = 'avatars/${currentUser.uid}.jpg';
-    final ref = FirebaseStorage.instance.ref().child(path);
-    await ref.putFile(_avatarImage!);
-    String avatarUrl = await ref.getDownloadURL();
-    return avatarUrl;
+  Future<void> _pickImage() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _avatarImage = File(pickedFile.path);
+      });
+    }
   }
 
-  Future<void> _showChangePasswordModal() async {
-    final _currentPasswordController = TextEditingController();
-    final _newPasswordController = TextEditingController();
-    bool _obscureCurrentPassword = true;
-    bool _obscureNewPassword = true;
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Cambiar Contraseña'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
+void _showLogoutDialog() {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return Dialog(
+        backgroundColor: const Color(0xFFA4D1BC),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Container(
+          height: 200, 
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center, 
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _buildTextFormField(
-                controller: _currentPasswordController,
-                label: 'Contraseña actual',
-                obscureText: _obscureCurrentPassword,
+              Text(
+                'Cerrar sesión',
+                style: const TextStyle(color: Colors.white, fontSize: 18),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 10),
-              _buildTextFormField(
-                controller: _newPasswordController,
-                label: 'Nueva contraseña',
-                obscureText: _obscureNewPassword,
+              Text(
+                '¿Estás seguro de que deseas cerrar sesión?',
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center, 
+                children: [
+                  OutlinedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: Colors.white),
+                      padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                    ),
+                    child: Text(
+                      'Cancelar',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  OutlinedButton(
+                    onPressed: () async {
+                      await _userService.signOut();
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Cierre de sesión exitoso')));
+                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomeScreen()));
+                    },
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: Colors.white),
+                      padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                    ),
+                    child: Text(
+                      'Sí',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          actions: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('Cancelar'),
-                ),
-                const SizedBox(width: 20),
-                TextButton(
-                  onPressed: () {
-                    String currentPassword = _currentPasswordController.text;
-                    String newPassword = _newPasswordController.text;
-                    if (currentPassword.isNotEmpty && newPassword.isNotEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Contraseña cambiada')));
-                      Navigator.of(context).pop();
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Por favor ingresa ambas contraseñas')));
-                    }
-                  },
-                  child: const Text('Cambiar'),
-                ),
-              ],
-            ),
-          ],
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
+
+
+
 
   @override
   Widget build(BuildContext context) {
-    final Color pageColor = const Color(0xFF8BC1A5);
+    final Color pageColor = const Color(0xFFD6F0E9);
     final Color buttonColor = const Color(0xFFA4D1BC);
 
     return Scaffold(
@@ -175,7 +167,7 @@ void _logout() async {
       appBar: AppBar(
         title: const Text('Editar Perfil'),
         automaticallyImplyLeading: false,
-        backgroundColor: Colors.blueAccent,
+        backgroundColor: const Color(0xFF8BC1A5),
       ),
       body: currentUser == null
           ? const Center(child: CircularProgressIndicator())
@@ -189,16 +181,18 @@ void _logout() async {
                       GestureDetector(
                         onTap: _pickImage,
                         child: CircleAvatar(
-                              radius: 50,
-                              backgroundImage: _avatarImage != null && _avatarImage!.path.isNotEmpty
-                                  ? FileImage(_avatarImage!)
-                                  : (currentUser.avatarUrl != null && currentUser.avatarUrl.isNotEmpty
-                                      ? NetworkImage(currentUser.avatarUrl)
-                                      : const AssetImage('assets/default_avatar.png') as ImageProvider),
-                              child: _avatarImage == null
-                                  ? const Icon(Icons.camera_alt, size: 30, color: Colors.white)
-                                  : null,
-                            ),
+                          radius: 60,
+                          backgroundColor: Colors.grey[300],
+                          backgroundImage: _avatarImage != null
+                              ? FileImage(_avatarImage!)
+                              : (currentUser != null && currentUser!.avatarUrl.isNotEmpty
+                                  ? NetworkImage(currentUser!.avatarUrl)
+                                  : null),
+                          child: (_avatarImage == null &&
+                                  (currentUser == null || currentUser!.avatarUrl.isEmpty))
+                              ? Icon(Icons.person, size: 50, color: Colors.grey[600])
+                              : null,
+                        ),
                       ),
                       const SizedBox(height: 20),
                       _buildTextFormField(
@@ -225,12 +219,6 @@ void _logout() async {
                           if (value == null || value.isEmpty) {
                             return 'Por favor ingresa tu primer nombre';
                           }
-                          if (value.length < 3) {
-                            return 'El nombre debe tener al menos 3 caracteres';
-                          }
-                          if (value.length > 50) {
-                            return 'El nombre no puede tener más de 50 caracteres';
-                          }
                           return null;
                         },
                       ),
@@ -242,102 +230,30 @@ void _logout() async {
                           if (value == null || value.isEmpty) {
                             return 'Por favor ingresa tus apellidos';
                           }
-                          if (value.length < 3) {
-                            return 'Los apellidos deben tener al menos 3 caracteres';
-                          }
-                          if (value.length > 50) {
-                            return 'Los apellidos no pueden tener más de 50 caracteres';
-                          }
                           return null;
                         },
                       ),
-                    const SizedBox(height: 16),
-                    if (!currentUser.isGoogleUser)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 20),
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: ElevatedButton(
-                            onPressed: _showChangePasswordModal,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: buttonColor, 
-                              foregroundColor: pageColor, 
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                side: BorderSide(color: pageColor, width: 2),
-                              ),
-                            ),
-                            child: const Text(
-                              'Cambiar Contraseña',
-                              style: TextStyle(fontSize: 18, color: Colors.white),
-                            ),
-                          ),
-                        ),
-                      ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
+                      const SizedBox(height: 16),
+                      _buildButton(
+                        text: 'Guardar Cambios',
                         onPressed: _saveProfile,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: buttonColor, 
-                          foregroundColor: pageColor, 
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(color: pageColor, width: 2),
-                          ),
-                        ),
-                        child: const Text(
-                          'Guardar Cambios',
-                          style: TextStyle(fontSize: 18, color: Colors.white),
-                        ),
                       ),
-                    ),
-                     SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: _logout,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: buttonColor, 
-                          foregroundColor: pageColor, 
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(color: pageColor, width: 2),
-                          ),
-                        ),
-                        child: const Text(
-                          'Cerrar sesión',
-                          style: TextStyle(fontSize: 18, color: Colors.white),
-                        ),
+                      const SizedBox(height: 16),
+                      _buildButton(
+                        text: 'Cerrar sesión',
+                        onPressed: _showLogoutDialog,
                       ),
-                    ),
-
                     ],
                   ),
                 ),
               ),
             ),
       bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: const Color(0xFF8BC1A5),
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.white60,
         currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-
-          switch (index) {
-            case 0:
-              Navigator.pushNamed(context, '/chatList');
-              break;
-            case 1:
-              Navigator.pushNamed(context, '/addUsers');
-              break;
-            case 2:
-              break; 
-          }
-        },
+        onTap: _onNavItemTapped,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.chat),
@@ -356,25 +272,47 @@ void _logout() async {
     );
   }
 
+  Widget _buildButton({required String text, required VoidCallback onPressed}) {
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFA4D1BC), 
+          foregroundColor: const Color(0xFFD6F0E9),  
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: const Color(0xFFD6F0E9), width: 2),
+          ),
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(fontSize: 18, color: Colors.white),
+        ),
+      ),
+    );
+  }
+
   Widget _buildTextFormField({
     required String label,
-    required TextEditingController controller, 
+    required TextEditingController controller,
     String? Function(String?)? validator,
     bool obscureText = false,
   }) {
     return TextFormField(
       controller: controller,
-      style: const TextStyle(color: Colors.white), 
+      style: const TextStyle(color: Colors.black),
       obscureText: obscureText,
-      decoration: InputDecoration(
+    decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: Colors.white),
+        labelStyle: const TextStyle(color: Colors.black),
         enabledBorder: OutlineInputBorder(
-          borderSide: const BorderSide(color: Colors.white),
+          borderSide: const BorderSide(color: Colors.black),
           borderRadius: BorderRadius.circular(12),
         ),
         focusedBorder: OutlineInputBorder(
-          borderSide: const BorderSide(color: Colors.white, width: 2),
+          borderSide: const BorderSide(color: Colors.black, width: 2),
           borderRadius: BorderRadius.circular(12),
         ),
       ),
