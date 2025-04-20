@@ -17,6 +17,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  final TextEditingController _searchController = TextEditingController();
+  String _searchText = '';
+
   void _onNavItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -41,6 +44,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final currentUserId = _auth.currentUser?.uid;
 
@@ -49,94 +58,125 @@ class _ChatListScreenState extends State<ChatListScreen> {
       appBar: AppBar(
         title: const Text('Mis Chats'),
         automaticallyImplyLeading: false,
-        backgroundColor: const Color(0xFF8BC1A5), 
+        backgroundColor: const Color(0xFF8BC1A5),
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _firestore
-            .collection('chats')
-            .orderBy('creationDate', descending: true)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) return const Center(child: Text('Error al cargar chats'));
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: TextField(
+              controller: _searchController,
+              onChanged: (value) {
+                setState(() {
+                  _searchText = value.toLowerCase();
+                });
+              },
+              decoration: InputDecoration(
+                hintText: 'Buscar por nombre de usuario...',
+                prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: _firestore
+                  .collection('chats')
+                  .orderBy('creationDate', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) return const Center(child: Text('Error al cargar chats'));
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-          final chats = snapshot.data!.docs.map((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            return Chat.fromMap(data, doc.id);
-          }).toList();
+                final chats = snapshot.data!.docs.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  return Chat.fromMap(data, doc.id);
+                }).where((chat) =>
+                  chat.user1Id == currentUserId || chat.user2Id == currentUserId
+                ).toList();
 
-          if (chats.isEmpty) {
-            return const Center(child: Text('Aún no tienes chats'));
-          }
+                if (chats.isEmpty) {
+                  return const Center(child: Text('Aún no tienes chats'));
+                }
 
-          return ListView.builder(
-            itemCount: chats.length,
-            itemBuilder: (context, index) {
-              final chat = chats[index];
-              final lastMsg = getLastMessage(chat.messages);
+                return ListView.builder(
+                  itemCount: chats.length,
+                  itemBuilder: (context, index) {
+                    final chat = chats[index];
+                    final lastMsg = getLastMessage(chat.messages);
 
-              // Determinar el otro usuario del chat
-              final otherUserId = (chat.user1Id == currentUserId)
-                  ? chat.user2Id
-                  : chat.user1Id;
+                    final otherUserId = (chat.user1Id == currentUserId)
+                        ? chat.user2Id
+                        : chat.user1Id;
 
-              return FutureBuilder<DocumentSnapshot>(
-                future: _firestore.collection('users').doc(otherUserId).get(),
-                builder: (context, userSnapshot) {
-                  if (userSnapshot.connectionState == ConnectionState.waiting) {
-                    return const ListTile(
-                      title: Text('Cargando usuario...'),
-                      subtitle: Text('...'),
+                    return FutureBuilder<DocumentSnapshot>(
+                      future: _firestore.collection('users').doc(otherUserId).get(),
+                      builder: (context, userSnapshot) {
+                        if (userSnapshot.connectionState == ConnectionState.waiting) {
+                          return const ListTile(
+                            title: Text('Cargando usuario...'),
+                            subtitle: Text('...'),
+                          );
+                        }
+
+                        if (userSnapshot.hasError ||
+                            !userSnapshot.hasData ||
+                            !userSnapshot.data!.exists) {
+                          return ListTile(
+                            title: Text('Usuario no encontrado'),
+                            subtitle: Text(lastMsg),
+                          );
+                        }
+
+                        final userData = userSnapshot.data!.data() as Map<String, dynamic>;
+                        final userName = userData['username'] ?? 'Usuario desconocido';
+
+                        // Aplica filtro de búsqueda
+                        if (!_searchText.isEmpty &&
+                            !userName.toLowerCase().contains(_searchText)) {
+                          return const SizedBox.shrink(); // Oculta si no hace match
+                        }
+
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFFFFF),
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.2),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          child: ListTile(
+                            title: Text(
+                              'Chat con $userName',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            subtitle: Text(lastMsg),
+                            onTap: () {
+                              Navigator.pushNamed(context, '/chatDetail', arguments: chat.id);
+                            },
+                          ),
+                        );
+                      },
                     );
-                  }
-
-                  if (userSnapshot.hasError ||
-                      !userSnapshot.hasData ||
-                      !userSnapshot.data!.exists) {
-                    return ListTile(
-                      title: Text('Usuario no encontrado'),
-                      subtitle: Text(lastMsg),
-                    );
-                  }
-
-                  final userData = userSnapshot.data!.data() as Map<String, dynamic>;
-                  final userName = userData['username'] ?? 'Usuario desconocido';
-
-return Column(
-  children: [
-    Container(
-      decoration: BoxDecoration(
-      color: const Color(0xFFEFFFFF), // ← tu color personalizado
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+                  },
+                );
+              },
+            ),
           ),
         ],
-      ),
-      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      child: ListTile(
-        title: Text(
-          'Chat con $userName',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Text(lastMsg),
-        onTap: () {
-          Navigator.pushNamed(context, '/chatDetail', arguments: chat.id);
-        },
-      ),
-    ),
-  ],
-);
-                },
-              );
-            },
-          );
-        },
       ),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: const Color(0xFF8BC1A5),
