@@ -36,7 +36,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadUserData();
   }
 
-  // Cargar los datos del usuario
   Future<void> _loadUserData() async {
     custom_user.User? user = await getCurrentUser();
     if (user != null) {
@@ -49,7 +48,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // Obtener el usuario actual
   Future<custom_user.User?> getCurrentUser() async {
     User? firebaseUser = FirebaseAuth.instance.currentUser;
     if (firebaseUser != null) {
@@ -61,17 +59,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return null;
   }
 
-  // Función para seleccionar la imagen
   Future<void> _pickImage() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      setState(() {
-        _avatarImage = File(image.path); 
-      });
-    }
+  final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+  if (image != null && image.path.isNotEmpty) {
+    setState(() {
+      _avatarImage = File(image.path);
+    });
+  } else {
+    print('No se seleccionó ninguna imagen o el path está vacío');
   }
+}
 
-  // Función para guardar los datos
+
   Future<void> _saveProfile() async {
     if (_formKey.currentState!.validate()) {
       await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).update({
@@ -87,12 +86,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 void _logout() async {
   await _userService.signOut();
 
-  // Redirigir a la pantalla de inicio de sesión
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(content: Text('Cierre de sesión exitoso')),
   );
 
-  // Espera 2 segundos antes de redirigir
   Future.delayed(Duration(seconds: 2), () {
     Navigator.pushReplacement(
       context,
@@ -100,9 +97,7 @@ void _logout() async {
     );
   });
 }
-  // Función para subir la imagen del avatar
   Future<String> _uploadAvatarImage() async {
-    // Usa Firebase Storage para subir la imagen (esto es solo un ejemplo)
     String path = 'avatars/${currentUser.uid}.jpg';
     final ref = FirebaseStorage.instance.ref().child(path);
     await ref.putFile(_avatarImage!);
@@ -110,7 +105,6 @@ void _logout() async {
     return avatarUrl;
   }
 
-  // Función para cambiar la contraseña (abre el modal)
   Future<void> _showChangePasswordModal() async {
     final _currentPasswordController = TextEditingController();
     final _newPasswordController = TextEditingController();
@@ -195,14 +189,16 @@ void _logout() async {
                       GestureDetector(
                         onTap: _pickImage,
                         child: CircleAvatar(
-                          radius: 50,
-                          backgroundImage: _avatarImage != null
-                              ? FileImage(_avatarImage!) 
-                              : NetworkImage(currentUser.avatarUrl) as ImageProvider,
-                          child: _avatarImage == null
-                              ? const Icon(Icons.camera_alt, size: 30, color: Colors.white)
-                              : null,
-                        ),
+                              radius: 50,
+                              backgroundImage: _avatarImage != null && _avatarImage!.path.isNotEmpty
+                                  ? FileImage(_avatarImage!)
+                                  : (currentUser.avatarUrl != null && currentUser.avatarUrl.isNotEmpty
+                                      ? NetworkImage(currentUser.avatarUrl)
+                                      : const AssetImage('assets/default_avatar.png') as ImageProvider),
+                              child: _avatarImage == null
+                                  ? const Icon(Icons.camera_alt, size: 30, color: Colors.white)
+                                  : null,
+                            ),
                       ),
                       const SizedBox(height: 20),
                       _buildTextFormField(
@@ -339,7 +335,7 @@ void _logout() async {
               Navigator.pushNamed(context, '/addUsers');
               break;
             case 2:
-              break; // No navega en el perfil
+              break; 
           }
         },
         items: const [
@@ -362,13 +358,13 @@ void _logout() async {
 
   Widget _buildTextFormField({
     required String label,
-    required TextEditingController controller, // Añadí controller como parámetro requerido
+    required TextEditingController controller, 
     String? Function(String?)? validator,
     bool obscureText = false,
   }) {
     return TextFormField(
       controller: controller,
-      style: const TextStyle(color: Colors.white), // Estilo corregido aquí
+      style: const TextStyle(color: Colors.white), 
       obscureText: obscureText,
       decoration: InputDecoration(
         labelText: label,
