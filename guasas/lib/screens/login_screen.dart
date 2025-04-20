@@ -13,45 +13,46 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   String _email = '';
   String _password = '';
+  bool _obscurePassword = true;
+
   final UserService _userService = UserService();
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
+  void _login() async {
+    if (_formKey.currentState?.validate() ?? false) {
+      _formKey.currentState?.save();
 
-void _login() async {
-  if (_formKey.currentState?.validate() ?? false) {
-    _formKey.currentState?.save();
+      String? result = await _userService.loginWithEmailPassword(_email, _password);
 
-    String? result = await _userService.loginWithEmailPassword(_email, _password);
+      if (result == null) {
+        await _userService.saveLoginState();
 
-    if (result == null) {
-      await _userService.saveLoginState(); 
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Inicio de sesión exitoso')),
-      );
-
-      Future.delayed(Duration(seconds: 2), () {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => ChatListScreen()),
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Inicio de sesión exitoso')),
         );
-      });
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result)),
-      );
+
+        Future.delayed(Duration(seconds: 2), () {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => ChatListScreen()),
+          );
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result)),
+        );
+      }
     }
   }
-}
 
   void _loginWithGoogle() async {
     String? result = await _userService.signInWithGoogle();
     try {
-      await _googleSignIn.signOut(); 
+      await _googleSignIn.signOut();
       GoogleSignInAccount? googleUser = await _googleSignIn.signInSilently();
-  
+
       if (result == null) {
-        await _userService.saveLoginState(); 
+        await _userService.saveLoginState();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Inicio de sesión con Google exitoso')),
         );
@@ -128,7 +129,18 @@ void _login() async {
                     return null;
                   },
                   onSaved: (value) => _password = value ?? '',
-                  obscureText: true,
+                  obscureText: _obscurePassword,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      color: Colors.white,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
                 ),
                 const SizedBox(height: 20),
                 SizedBox(
@@ -184,6 +196,7 @@ void _login() async {
     String? Function(String?)? validator,
     required void Function(String?) onSaved,
     bool obscureText = false,
+    Widget? suffixIcon,
   }) {
     return TextFormField(
       style: const TextStyle(color: Colors.white),
@@ -191,6 +204,7 @@ void _login() async {
       decoration: InputDecoration(
         labelText: label,
         labelStyle: const TextStyle(color: Colors.white),
+        suffixIcon: suffixIcon,
         enabledBorder: OutlineInputBorder(
           borderSide: const BorderSide(color: Colors.white),
           borderRadius: BorderRadius.circular(12),
