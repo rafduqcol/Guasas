@@ -16,6 +16,7 @@ class ChatDetailScreen extends StatefulWidget {
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final TextEditingController _messageController = TextEditingController();
   final currentUser = FirebaseAuth.instance.currentUser;
+  String? otherUserName;
 
   Future<void> sendMessage() async {
     if (_messageController.text.trim().isEmpty || currentUser == null) return;
@@ -26,7 +27,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       image: null,
       chatId: widget.chatId,
       senderId: currentUser!.uid,
-      receiverId: '', // podrías deducir esto luego si querés
+      receiverId: '', 
       timestamp: DateTime.now(),
     );
 
@@ -37,13 +38,27 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     _messageController.clear();
   }
 
+  Future<void> fetchOtherUserName(Chat chat) async {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    final otherUserId = chat.user1Id == currentUserId ? chat.user2Id : chat.user1Id;
+
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(otherUserId).get();
+
+    if (userDoc.exists) {
+      final data = userDoc.data() as Map<String, dynamic>;
+      setState(() {
+        otherUserName = data['username'] ?? 'Usuario';
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFD6F0E9), // ← tu color de fondo general
+      backgroundColor: const Color(0xFFD6F0E9),
       appBar: AppBar(
-        title: const Text('Chat'),
-        backgroundColor: const Color(0xFF8BC1A5), // ← Tu color personalizado
+        title: Text('Chat con ${otherUserName ?? '...'}'),
+        backgroundColor: const Color(0xFF8BC1A5),
       ),
       body: Column(
         children: [
@@ -61,6 +76,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
 
                 final data = snapshot.data!.data() as Map<String, dynamic>;
                 final chat = Chat.fromMap(data, snapshot.data!.id);
+
+                if (otherUserName == null) {
+                  fetchOtherUserName(chat);
+                }
+
                 final messages = chat.messages..sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
                 return ListView.builder(
