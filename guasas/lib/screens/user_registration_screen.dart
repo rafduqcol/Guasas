@@ -81,7 +81,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
           SnackBar(content: Text('Usuario registrado con éxito')),
         );
 
-        Future.delayed(Duration(seconds: 2), () {
+        Future.delayed(Duration(seconds: 1), () {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => LoginScreen()),

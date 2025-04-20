@@ -10,32 +10,35 @@ class UserService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
-  // Función para registrar un usuario
-  Future<String?> registerUser(custom_user.User user) async {
-    try {
-      // Crear un usuario con correo y contraseña
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-        email: user.email,
-        password: user.password,
-      );
+Future<String?> registerUser(custom_user.User user) async {
+  try {
+    UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+      email: user.email,
+      password: user.password,
+    );
 
-      // Insertar los datos en Firestore
-      await _firestore.collection('users').doc(userCredential.user!.uid).set({
-        'uid': userCredential.user!.uid,
-        'firstName': user.firstName,
-        'lastName': user.lastName,
-        'username': user.username,
-        'email': user.email,
-        'password': BCrypt.hashpw(user.password, BCrypt.gensalt()), 
-        'avatarUrl': user.avatarUrl,
-        'isGoogleUser': false,
-      });
- 
-      return null;  
-    } catch (e) {
-      return e.toString();  
+    await _firestore.collection('users').doc(userCredential.user!.uid).set({
+      'uid': userCredential.user!.uid,
+      'firstName': user.firstName,
+      'lastName': user.lastName,
+      'username': user.username,
+      'email': user.email,
+      'password': BCrypt.hashpw(user.password, BCrypt.gensalt()), 
+      'avatarUrl': user.avatarUrl,
+      'isGoogleUser': false,
+    });
+
+    return null; 
+
+  } on FirebaseAuthException catch (e) {
+    if (e.code == 'email-already-in-use') {
+      return 'Este correo electrónico ya está registrado.';
     }
+    return 'Error de autenticación: ${e.message}';
+  } catch (e) {
+    return 'Error inesperado: ${e.toString()}';
   }
+}
 
     
  Future<String?> registerUserWithGoogle(custom_user.User user) async {

@@ -56,7 +56,7 @@ void _login() async {
           SnackBar(content: Text('Inicio de sesión con Google exitoso')),
         );
 
-        Future.delayed(Duration(seconds: 2), () {
+        Future.delayed(Duration(seconds: 1), () {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => ChatListScreen()),
@@ -135,7 +135,7 @@ void _login() async {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: _loginWithGoogle,
+                    onPressed: _login,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: buttonColor,
                       foregroundColor: pageColor,
