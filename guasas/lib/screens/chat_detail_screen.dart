@@ -40,8 +40,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFD6F0E9), // ← tu color de fondo general
       appBar: AppBar(
         title: const Text('Chat'),
+        backgroundColor: const Color(0xFF8BC1A5), // ← Tu color personalizado
       ),
       body: Column(
         children: [
