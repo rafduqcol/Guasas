@@ -112,7 +112,7 @@ Future<String?> registerUser(custom_user.User user) async {
           email: email,
           password: password,
         );
-
+        await saveLoginState();
         return null; 
       } else {
         return 'Contraseña incorrecta';
@@ -130,7 +130,6 @@ Future<String?> signInWithGoogle() async {
       return 'El inicio de sesión con Google fue cancelado.';
     }
 
-    // Obtiene el token de acceso y de ID para autenticar con Firebase
     final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
     final OAuthCredential credential = GoogleAuthProvider.credential(
@@ -143,8 +142,8 @@ Future<String?> signInWithGoogle() async {
 
     if (user != null) {
       DocumentSnapshot userDoc = await _firestore.collection('users').doc(user.uid).get();
+      await saveLoginState();
 
-      // Si no existe el usuario en Firestore, retornar un mensaje de error
       if (!userDoc.exists) {
         return 'El correo electrónico no está registrado en nuestro sistema. Por favor, regístrese primero.';
       }

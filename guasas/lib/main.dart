@@ -7,9 +7,8 @@ import 'screens/add_users_screen.dart';
 import 'screens/chat_detail_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/main_menu_screen.dart';
-import 'screens/login_screen.dart';
+import 'screens/home.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
@@ -24,6 +23,7 @@ class MyApp extends StatelessWidget {
   // Función para verificar si el usuario está logueado
   Future<bool> isLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
+print('Verificando estado de login... ' + (prefs.getBool('isLoggedIn')?.toString() ?? 'false'));
     return prefs.getBool('isLoggedIn') ?? false; 
   }
 
@@ -40,7 +40,7 @@ class MyApp extends StatelessWidget {
             return Center(child: Text('Error al verificar el estado de login'));
           } else {
             final isLogged = snapshot.data ?? false;
-            return isLogged ? ChatListScreen() : LoginScreen();  
+            return isLogged ? ChatListScreen() : HomeScreen();  
           }
         },
       ),
