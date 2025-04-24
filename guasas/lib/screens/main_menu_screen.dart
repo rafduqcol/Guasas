@@ -136,8 +136,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           );
                         }
 
+
                         final userData = userSnapshot.data!.data() as Map<String, dynamic>;
                         final userName = userData['username'] ?? 'Usuario desconocido';
+                        final avatarUrl = userData['avatarUrl'] ?? '';
 
                         // Aplica filtro de búsqueda
                         if (!_searchText.isEmpty &&
@@ -159,6 +161,19 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           ),
                           margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                           child: ListTile(
+                              leading: CircleAvatar(
+                                    radius: 24,
+                                    backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
+                                        ? NetworkImage(avatarUrl)
+                                        : null,
+                                    backgroundColor: Color(0xFF8BC1A5),
+                                    child: (avatarUrl == null || avatarUrl.isEmpty)
+                                        ? Text(
+                                            userName.isNotEmpty ? userName[0].toUpperCase() : '',
+                                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                          )
+                                        : null,
+                                  ),
                             title: Text(
                               '$userName',
                               style: const TextStyle(fontWeight: FontWeight.bold),
