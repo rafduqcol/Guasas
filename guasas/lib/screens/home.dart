@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:guasas/screens/login_screen.dart';
 import 'package:guasas/screens/user_registration_screen.dart';
 
-
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -17,7 +16,7 @@ class HomeScreen extends StatelessWidget {
         child: Align(
           alignment: Alignment.topCenter,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 100),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 60),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -61,7 +60,6 @@ class HomeScreen extends StatelessWidget {
                         color: Colors.white,
                       ),
                     ),
-                    
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -70,14 +68,14 @@ class HomeScreen extends StatelessWidget {
                   width: 200,
                   height: 50,
                   child: ElevatedButton(
-                  onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => UserRegistrationScreen(),
-                    ),
-                  );
-                },
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => UserRegistrationScreen(),
+                        ),
+                      );
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: buttonColor,
                       foregroundColor: pageColor,
@@ -97,6 +95,12 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ),
                   ),
+                ),
+                const SizedBox(height: 40),
+                // Logo debajo de los botones
+                Image.asset(
+                  'assets/images/Guasas_logo.png',
+                  height: 200,
                 ),
               ],
             ),
