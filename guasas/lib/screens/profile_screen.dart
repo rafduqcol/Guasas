@@ -5,6 +5,7 @@ import '../models/user.dart' as custom_user;
 import '../services/UserService.dart';
 import 'home.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -57,22 +58,59 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _usernameController.text = user?.username ?? '';
     });
   }
+Future<void> _saveProfile() async {
+  if (_formKey.currentState!.validate()) {
+    try {
+      String? imageUrl;
 
-  Future<void> _saveProfile() async {
-    if (_formKey.currentState!.validate()) {
-      try {
-        await _userService.updateUserProfile(
-          currentUser!.uid,
-          _firstNameController.text,
-          _lastNameController.text,
-          _usernameController.text,
-        );
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Perfil actualizado')));
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al actualizar el perfil')));
+      // Subimos el avatar solo si se seleccionó uno
+      if (_avatarImage != null) {
+        print("Subiendo imagen de avatar...");
+        
+        // Creamos una referencia para la imagen en Firebase Storage
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('avatars')
+            .child('${currentUser!.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg');
+        print("pepes" +  storageRef.fullPath);
+
+        // Subimos el archivo al almacenamiento
+        final uploadTask = storageRef.putFile(_avatarImage!);
+
+        print("adios");
+
+        // Esperamos que la subida se complete y verificamos el estado
+        final TaskSnapshot snapshot = await uploadTask.whenComplete(() => null);
+        print('Subida de imagen completada con estado: ${snapshot.state}');
+
+        // Obtenemos la URL de la imagen subida
+        imageUrl = await snapshot.ref.getDownloadURL();
+        print('URL de la imagen: $imageUrl');
       }
+
+      // Llamamos al servicio para actualizar el perfil con la nueva URL de la imagen
+      await _userService.updateUserProfile(
+        uid: currentUser!.uid,
+        firstName: _firstNameController.text,
+        lastName: _lastNameController.text,
+        username: _usernameController.text,
+        avatarUrl: imageUrl, // Puede ser null si no se subió una imagen
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Perfil actualizado')),
+      );
+    } catch (e) {
+      // Capturamos cualquier error y mostramos un mensaje
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al actualizar el perfil: $e')),
+      );
     }
   }
+}
+
+
+
 
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);

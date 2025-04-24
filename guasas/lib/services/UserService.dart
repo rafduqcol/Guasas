@@ -182,20 +182,29 @@ Future<String?> signInWithGoogle() async {
     }
     return null;  
   }
-
-Future<void> updateUserProfile(String uid, String firstName, String lastName, String username) async {
+Future<void> updateUserProfile({
+  required String uid,
+  required String firstName,
+  required String lastName,
+  required String username,
+  String? avatarUrl, 
+}) async {
   try {
-    String? avatarUrl;
-   
-
-    await _firestore.collection('users').doc(uid).update({
+    final Map<String, dynamic> updatedData = {
       'firstName': firstName,
       'lastName': lastName,
       'username': username,
-    });
+    };
+
+    // ✅ Solo actualiza el avatar si hay uno nuevo
+    if (avatarUrl != null) {
+      updatedData['avatarUrl'] = avatarUrl;
+    }
+
+    await _firestore.collection('users').doc(uid).update(updatedData);
   } catch (e) {
     print("Error al actualizar el perfil: $e");
   }
 }
-}
 
+}
