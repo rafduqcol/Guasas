@@ -229,7 +229,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ),
                       ),
                     ),
-
                       const SizedBox(height: 20),
                       _buildTextFormField(
                         label: 'Nombre de usuario',
