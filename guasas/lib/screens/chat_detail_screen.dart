@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/message.dart';
 import '../models/chat.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:file_selector/file_selector.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   final String chatId;
@@ -16,7 +18,10 @@ class ChatDetailScreen extends StatefulWidget {
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final TextEditingController _messageController = TextEditingController();
   final currentUser = FirebaseAuth.instance.currentUser;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
+
   String? otherUserName;
+  String otherAvatarUrl = '';
 
   Future<void> sendMessage() async {
     if (_messageController.text.trim().isEmpty || currentUser == null) return;
@@ -27,7 +32,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       image: null,
       chatId: widget.chatId,
       senderId: currentUser!.uid,
-      receiverId: '', 
+      receiverId: '',
       timestamp: DateTime.now(),
     );
 
@@ -36,6 +41,36 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     });
 
     _messageController.clear();
+  }
+
+  Future<void> sendImage() async {
+    if (currentUser == null) return;
+
+    final XFile? file = await openFile(acceptedTypeGroups: [
+      XTypeGroup(label: 'images', extensions: ['jpg', 'jpeg', 'png'])
+    ]);
+
+    if (file != null) {
+      final uid = currentUser!.uid;
+      final ref = _storage.ref().child('chatImages/${DateTime.now().millisecondsSinceEpoch}_$uid.jpg');
+
+      final uploadTask = await ref.putData(await file.readAsBytes());
+      final downloadUrl = await ref.getDownloadURL();
+
+      final newMessage = Message(
+        id: FirebaseFirestore.instance.collection('messages').doc().id,
+        content: '',
+        image: downloadUrl,
+        chatId: widget.chatId,
+        senderId: uid,
+        receiverId: '',
+        timestamp: DateTime.now(),
+      );
+
+      await FirebaseFirestore.instance.collection('chats').doc(widget.chatId).update({
+        'messages': FieldValue.arrayUnion([newMessage.toMap()])
+      });
+    }
   }
 
   Future<void> fetchOtherUserName(Chat chat) async {
@@ -48,6 +83,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
       final data = userDoc.data() as Map<String, dynamic>;
       setState(() {
         otherUserName = data['username'] ?? 'Usuario';
+        otherAvatarUrl = data['avatarUrl'] ?? '';
       });
     }
   }
@@ -57,6 +93,22 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFD6F0E9),
       appBar: AppBar(
+        leading: Padding(
+          padding: const EdgeInsets.all(6.0),
+          child: CircleAvatar(
+            radius: 24,
+            backgroundImage: (otherAvatarUrl.isNotEmpty)
+                ? NetworkImage(otherAvatarUrl)
+                : null,
+            backgroundColor: const Color(0xFF8BC1A5),
+            child: (otherAvatarUrl.isEmpty && otherUserName != null)
+                ? Text(
+                    otherUserName!.isNotEmpty ? otherUserName![0].toUpperCase() : '',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  )
+                : null,
+          ),
+        ),
         title: Text('Chat con ${otherUserName ?? '...'}'),
         backgroundColor: const Color(0xFF8BC1A5),
       ),
@@ -99,7 +151,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                           color: isMe ? Colors.blue[100] : Colors.grey[300],
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Text(msg.content),
+                        child: msg.image != null && msg.image!.isNotEmpty
+                            ? Image.network(msg.image!)
+                            : Text(msg.content),
                       ),
                     );
                   },
@@ -112,6 +166,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
             child: Row(
               children: [
+                IconButton(
+                  icon: const Icon(Icons.image),
+                  onPressed: sendImage,
+                ),
                 Expanded(
                   child: TextField(
                     controller: _messageController,
