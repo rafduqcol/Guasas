@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'dart:io';
+import 'dart:typed_data';
 import '../models/user.dart' as custom_user;
 import '../services/UserService.dart';
 import 'home.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -15,12 +13,12 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   int _selectedIndex = 2;
   custom_user.User? currentUser;
-  final UserService _userService = UserService();  
+  final UserService _userService = UserService();
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _firstNameController;
   late TextEditingController _lastNameController;
   late TextEditingController _usernameController;
-  File? _avatarImage;
+  Uint8List? _avatarBytes;
 
   @override
   void initState() {
@@ -42,13 +40,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         break;
       case 1:
         Navigator.pushNamed(context, '/addUsers');
+        break;
       case 2:
         break;
     }
   }
 
   Future<void> _loadUserData() async {
-    custom_user.User? user = await _userService.getCurrentUser();  
+    custom_user.User? user = await _userService.getCurrentUser();
     setState(() {
       currentUser = user;
       _firstNameController.text = user?.firstName ?? '';
@@ -60,60 +59,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _saveProfile() async {
     if (_formKey.currentState!.validate()) {
       try {
-        String? imageUrl;
-
-        if (_avatarImage != null) {
-          print("Subiendo archivo de avatar...");
-
-          final storageRef = FirebaseStorage.instance
-              .ref()
-              .child('avatars')
-              .child('${currentUser!.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg');
-          print("pepes" +  storageRef.fullPath);
-
-          final uploadTask = storageRef.putFile(_avatarImage!);
-
-          print("adios");
-
-          // Esperamos que la subida se complete y verificamos el estado
-          final TaskSnapshot snapshot = await uploadTask.whenComplete(() => null);
-          print('Subida de archivo completada con estado: ${snapshot.state}');
-
-          // Obtenemos la URL del archivo subido
-          imageUrl = await snapshot.ref.getDownloadURL();
-          print('URL del archivo: $imageUrl');
-        }
-
         await _userService.updateUserProfile(
           uid: currentUser!.uid,
           firstName: _firstNameController.text,
           lastName: _lastNameController.text,
           username: _usernameController.text,
-          avatarUrl: imageUrl, // Puede ser null si no se subió una imagen
         );
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Perfil actualizado')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Perfil actualizado')));
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al actualizar el perfil: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error al actualizar el perfil')));
       }
     }
   }
 
   // Reemplazamos ImagePicker con FilePicker
   Future<void> _pickImage() async {
-    // Abrimos el selector de archivos
-    FilePickerResult? result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['jpg', 'jpeg', 'png']);
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: true,
+    );
 
-    if (result != null) {
+    if (result != null && result.files.single.bytes != null) {
+      Uint8List fileBytes = result.files.single.bytes!;
       setState(() {
-        _avatarImage = File(result.files.single.path!);
+        _avatarBytes = fileBytes;
       });
+
+      // Subir y guardar la URL
+      try {
+        String url = await _userService.uploadAvatar(currentUser!.uid, fileBytes);
+        print('Imagen subida con URL: $url');
+        currentUser!.avatarUrl = url; // Actualiza el modelo local
+      } catch (e) {
+        print('Error al subir imagen: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al subir imagen')),
+        );
+      }
     }
   }
+
 
   void _showLogoutDialog() {
     showDialog(
@@ -125,10 +112,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             borderRadius: BorderRadius.circular(12),
           ),
           child: Container(
-            height: 200, 
+            height: 200,
             padding: const EdgeInsets.all(20),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center, 
+              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
@@ -144,7 +131,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 20),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.center, 
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     OutlinedButton(
                       onPressed: () {
@@ -152,7 +139,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       },
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(color: Colors.white),
-                        padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 15, vertical: 8),
                       ),
                       child: Text(
                         'Cancelar',
@@ -163,12 +151,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     OutlinedButton(
                       onPressed: () async {
                         await _userService.signOut();
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Cierre de sesión exitoso')));
-                        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomeScreen()));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Cierre de sesión exitoso')));
+                        Navigator.pushReplacement(context,
+                            MaterialPageRoute(builder: (context) => HomeScreen()));
                       },
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(color: Colors.white),
-                        padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 15, vertical: 8),
                       ),
                       child: Text(
                         'Sí',
@@ -211,14 +202,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: CircleAvatar(
                           radius: 60,
                           backgroundColor: Colors.grey[300],
-                          backgroundImage: _avatarImage != null
-                              ? FileImage(_avatarImage!)
-                              : (currentUser != null && currentUser!.avatarUrl.isNotEmpty
+                          backgroundImage: _avatarBytes != null
+                              ? MemoryImage(_avatarBytes!)
+                              : (currentUser != null &&
+                                      currentUser!.avatarUrl.isNotEmpty
                                   ? NetworkImage(currentUser!.avatarUrl)
-                                  : null),
-                          child: (_avatarImage == null &&
-                                  (currentUser == null || currentUser!.avatarUrl.isEmpty))
-                              ? Icon(Icons.person, size: 50, color: Colors.grey[600])
+                                  : null) as ImageProvider?,
+                          child: (_avatarBytes == null &&
+                                  (currentUser == null ||
+                                      currentUser!.avatarUrl.isEmpty))
+                              ? Icon(Icons.person,
+                                  size: 50, color: Colors.grey[600])
                               : null,
                         ),
                       ),
@@ -307,8 +301,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFA4D1BC), 
-          foregroundColor: const Color(0xFFD6F0E9),  
+          backgroundColor: const Color(0xFFA4D1BC),
+          foregroundColor: const Color(0xFFD6F0E9),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
             side: BorderSide(color: const Color(0xFFD6F0E9), width: 2),

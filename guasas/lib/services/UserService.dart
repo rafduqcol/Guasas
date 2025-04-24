@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:typed_data'; // Esto es lo que falta
 import '../models/user.dart' as custom_user;
 import 'package:bcrypt/bcrypt.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -207,4 +208,23 @@ Future<void> updateUserProfile({
   }
 }
 
+  Future<String> uploadAvatar(String uid, Uint8List fileBytes) async {
+    try {
+      final ref = _storage.ref().child('avatars/$uid.jpg');
+      await ref.putData(fileBytes);
+      String downloadUrl = await ref.getDownloadURL();
+
+      // Guardar la URL en Firestore
+      await _firestore.collection('users').doc(uid).update({
+        'avatarUrl': downloadUrl,
+      });
+
+      return downloadUrl;
+    } catch (e) {
+      throw Exception('Error al subir imagen: $e');
+    }
+  }
+
 }
+
+
