@@ -107,10 +107,11 @@ Future<String?> registerUser(custom_user.User user) async {
       bool passwordMatch = await BCrypt.checkpw(password, storedHashedPassword);
 
       if (passwordMatch) {
-        await _auth.signInWithEmailAndPassword(
+        UserCredential credential = await _auth.signInWithEmailAndPassword(
           email: email,
           password: password,
         );
+
         return null; 
       } else {
         return 'Contraseña incorrecta';
@@ -120,48 +121,45 @@ Future<String?> registerUser(custom_user.User user) async {
     }
   }
 
-  Future<String?> signInWithGoogle() async {
-    try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        return 'El inicio de sesión con Google fue cancelado.';
-      }
-
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
-      final OAuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      UserCredential userCredential = await _auth.signInWithCredential(credential);
-
-      User? user = userCredential.user;
-
-      if (user != null) {
-        DocumentSnapshot userDoc = await _firestore.collection('users').doc(user.uid).get();
-
-        if (!userDoc.exists) {
-          await _firestore.collection('users').doc(user.uid).set({
-            'uid': user.uid,
-            'firstName': user.displayName?.split(" ")[0] ?? '',
-            'lastName': (user.displayName?.split(" ").length ?? 0) > 1 
-                        ? user.displayName?.split(" ")[1] 
-                        : '',
-            'email': user.email,
-            'avatarUrl': user.photoURL ?? '',
-            'username': user.displayName?.toLowerCase() ?? '',
-            'isGoogleUser': true,
-          });
-        }
-      }
-
-      return null;  
-    } catch (e) {
-      print("Error al iniciar sesión con Google: $e");
-      return e.toString();  
+Future<String?> signInWithGoogle() async {
+  try {
+    // Inicia el proceso de autenticación con Google
+    final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+    if (googleUser == null) {
+      return 'El inicio de sesión con Google fue cancelado.';
     }
+
+    // Obtiene el token de acceso y de ID para autenticar con Firebase
+    final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+    final OAuthCredential credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
+
+    UserCredential userCredential = await _auth.signInWithCredential(credential);
+    User? user = userCredential.user;
+
+    if (user != null) {
+      DocumentSnapshot userDoc = await _firestore.collection('users').doc(user.uid).get();
+
+      // Si no existe el usuario en Firestore, retornar un mensaje de error
+      if (!userDoc.exists) {
+        return 'El correo electrónico no está registrado en nuestro sistema. Por favor, regístrese primero.';
+      }
+
+    }
+
+    return null;  
+  } catch (e) {
+    print("Error al iniciar sesión con Google: $e");
+    return e.toString();  
   }
+}
+
+
+
+
 
   Future<void> saveLoginState() async {
     final prefs = await SharedPreferences.getInstance();
@@ -184,8 +182,6 @@ Future<String?> registerUser(custom_user.User user) async {
     }
     return null;  
   }
-
-
 
 Future<void> updateUserProfile(String uid, String firstName, String lastName, String username) async {
   try {

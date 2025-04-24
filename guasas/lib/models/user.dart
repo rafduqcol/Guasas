@@ -17,7 +17,7 @@ class User {
     required this.password,
     this.avatarUrl = '',
     this.isGoogleUser = false,
-  });
+ });
 
   User copyWith ({
     String? uid,

@@ -160,7 +160,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                           child: ListTile(
                             title: Text(
-                              'Chat con $userName',
+                              '$userName',
                               style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                             subtitle: Text(lastMsg),
