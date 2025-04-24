@@ -75,28 +75,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // Usando file_selector en lugar de file_picker
   Future<void> _pickImage() async {
-    // Definir tipos de imagen aceptados
     final typeGroup = XTypeGroup(
       label: 'images',
       extensions: ['jpg', 'jpeg', 'png', 'gif'],
     );
-    // Abrir selector
-    final XFile? file = await openFile(acceptedTypeGroups: [typeGroup]);
+   final XFile? file = await openFile(acceptedTypeGroups: [typeGroup]);
 
     if (file != null) {
-      // Leer bytes
-      Uint8List fileBytes = await file.readAsBytes();
+     Uint8List fileBytes = await file.readAsBytes();
       setState(() {
         _avatarBytes = fileBytes;
       });
 
-      // Subir y guardar la URL
       try {
         String url = await _userService.uploadAvatar(currentUser!.uid, fileBytes);
         print('Imagen subida con URL: \$url');
-        currentUser!.avatarUrl = url; // Actualiza el modelo local
+        currentUser!.avatarUrl = url;
       } catch (e) {
         print('Error al subir imagen: \$e');
         ScaffoldMessenger.of(context).showSnackBar(
@@ -201,25 +196,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
-                      GestureDetector(
-                        onTap: _pickImage,
-                        child: CircleAvatar(
-                          radius: 60,
-                          backgroundColor: Colors.grey[300],
-                          backgroundImage: _avatarBytes != null
-                              ? MemoryImage(_avatarBytes!)
-                              : (currentUser != null &&
-                                      currentUser!.avatarUrl.isNotEmpty
-                                  ? NetworkImage(currentUser!.avatarUrl)
-                                  : null) as ImageProvider?,
-                          child: (_avatarBytes == null &&
-                                  (currentUser == null ||
-                                      currentUser!.avatarUrl.isEmpty))
-                              ? Icon(Icons.person,
-                                  size: 50, color: Colors.grey[600])
-                              : null,
+                    GestureDetector(
+                      onTap: _pickImage,
+                      child: Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.grey[200],
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black26,
+                              blurRadius: 8,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
                         ),
+                        child: _avatarBytes != null
+                            ? CircleAvatar(
+                                radius: 60,
+                                backgroundImage: MemoryImage(_avatarBytes!),
+                              )
+                            : currentUser != null && currentUser!.avatarUrl.isNotEmpty
+                                ? CircleAvatar(
+                                    radius: 60,
+                                    backgroundImage: NetworkImage(currentUser!.avatarUrl),
+                                  )
+                                : Icon(
+                                    Icons.person,
+                                    size: 60,
+                                    color: Colors.grey[500],
+                                  ),
                       ),
+                    ),
+
                       const SizedBox(height: 20),
                       _buildTextFormField(
                         label: 'Nombre de usuario',
