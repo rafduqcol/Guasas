@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import '../models/user.dart' as custom_user;
 import '../services/UserService.dart';
@@ -22,8 +22,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late TextEditingController _usernameController;
   File? _avatarImage;
 
-  final ImagePicker _picker = ImagePicker();
-
   @override
   void initState() {
     super.initState();
@@ -33,7 +31,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadUserData();
   }
 
-   void _onNavItemTapped(int index) {
+  void _onNavItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
@@ -58,142 +56,134 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _usernameController.text = user?.username ?? '';
     });
   }
-Future<void> _saveProfile() async {
-  if (_formKey.currentState!.validate()) {
-    try {
-      String? imageUrl;
 
-      // Subimos el avatar solo si se seleccionó uno
-      if (_avatarImage != null) {
-        print("Subiendo imagen de avatar...");
-        
-        // Creamos una referencia para la imagen en Firebase Storage
-        final storageRef = FirebaseStorage.instance
-            .ref()
-            .child('avatars')
-            .child('${currentUser!.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg');
-        print("pepes" +  storageRef.fullPath);
+  Future<void> _saveProfile() async {
+    if (_formKey.currentState!.validate()) {
+      try {
+        String? imageUrl;
 
-        // Subimos el archivo al almacenamiento
-        final uploadTask = storageRef.putFile(_avatarImage!);
+        if (_avatarImage != null) {
+          print("Subiendo archivo de avatar...");
 
-        print("adios");
+          final storageRef = FirebaseStorage.instance
+              .ref()
+              .child('avatars')
+              .child('${currentUser!.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg');
+          print("pepes" +  storageRef.fullPath);
 
-        // Esperamos que la subida se complete y verificamos el estado
-        final TaskSnapshot snapshot = await uploadTask.whenComplete(() => null);
-        print('Subida de imagen completada con estado: ${snapshot.state}');
+          final uploadTask = storageRef.putFile(_avatarImage!);
 
-        // Obtenemos la URL de la imagen subida
-        imageUrl = await snapshot.ref.getDownloadURL();
-        print('URL de la imagen: $imageUrl');
+          print("adios");
+
+          // Esperamos que la subida se complete y verificamos el estado
+          final TaskSnapshot snapshot = await uploadTask.whenComplete(() => null);
+          print('Subida de archivo completada con estado: ${snapshot.state}');
+
+          // Obtenemos la URL del archivo subido
+          imageUrl = await snapshot.ref.getDownloadURL();
+          print('URL del archivo: $imageUrl');
+        }
+
+        await _userService.updateUserProfile(
+          uid: currentUser!.uid,
+          firstName: _firstNameController.text,
+          lastName: _lastNameController.text,
+          username: _usernameController.text,
+          avatarUrl: imageUrl, // Puede ser null si no se subió una imagen
+        );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Perfil actualizado')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al actualizar el perfil: $e')),
+        );
       }
-
-      // Llamamos al servicio para actualizar el perfil con la nueva URL de la imagen
-      await _userService.updateUserProfile(
-        uid: currentUser!.uid,
-        firstName: _firstNameController.text,
-        lastName: _lastNameController.text,
-        username: _usernameController.text,
-        avatarUrl: imageUrl, // Puede ser null si no se subió una imagen
-      );
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Perfil actualizado')),
-      );
-    } catch (e) {
-      // Capturamos cualquier error y mostramos un mensaje
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al actualizar el perfil: $e')),
-      );
     }
   }
-}
 
-
-
-
+  // Reemplazamos ImagePicker con FilePicker
   Future<void> _pickImage() async {
-    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
+    // Abrimos el selector de archivos
+    FilePickerResult? result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['jpg', 'jpeg', 'png']);
+
+    if (result != null) {
       setState(() {
-        _avatarImage = File(pickedFile.path);
+        _avatarImage = File(result.files.single.path!);
       });
     }
   }
 
-
-void _showLogoutDialog() {
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return Dialog(
-        backgroundColor: const Color(0xFFA4D1BC),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Container(
-          height: 200, 
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center, 
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                'Cerrar sesión',
-                style: const TextStyle(color: Colors.white, fontSize: 18),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 10),
-              Text(
-                '¿Estás seguro de que deseas cerrar sesión?',
-                style: const TextStyle(color: Colors.white, fontSize: 14),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center, 
-                children: [
-                  OutlinedButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.white),
-                      padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-                    ),
-                    child: Text(
-                      'Cancelar',
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  OutlinedButton(
-                    onPressed: () async {
-                      await _userService.signOut();
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Cierre de sesión exitoso')));
-                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomeScreen()));
-                    },
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.white),
-                      padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-                    ),
-                    child: Text(
-                      'Sí',
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: const Color(0xFFA4D1BC),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
-        ),
-      );
-    },
-  );
-}
-
-
-
+          child: Container(
+            height: 200, 
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center, 
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  'Cerrar sesión',
+                  style: const TextStyle(color: Colors.white, fontSize: 18),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  '¿Estás seguro de que deseas cerrar sesión?',
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center, 
+                  children: [
+                    OutlinedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: Colors.white),
+                        padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                      ),
+                      child: Text(
+                        'Cancelar',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    OutlinedButton(
+                      onPressed: () async {
+                        await _userService.signOut();
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Cierre de sesión exitoso')));
+                        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomeScreen()));
+                      },
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: Colors.white),
+                        padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                      ),
+                      child: Text(
+                        'Sí',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -342,7 +332,7 @@ void _showLogoutDialog() {
       controller: controller,
       style: const TextStyle(color: Colors.black),
       obscureText: obscureText,
-    decoration: InputDecoration(
+      decoration: InputDecoration(
         labelText: label,
         labelStyle: const TextStyle(color: Colors.black),
         enabledBorder: OutlineInputBorder(
