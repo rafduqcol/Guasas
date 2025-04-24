@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:file_selector/file_selector.dart';
 import 'dart:typed_data';
 import '../models/user.dart' as custom_user;
 import '../services/UserService.dart';
@@ -69,20 +69,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
             .showSnackBar(SnackBar(content: Text('Perfil actualizado')));
       } catch (e) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error al actualizar el perfil')));
+            .showSnackBar(
+                SnackBar(content: Text('Error al actualizar el perfil')));
       }
     }
   }
 
-  // Reemplazamos ImagePicker con FilePicker
+  // Usando file_selector en lugar de file_picker
   Future<void> _pickImage() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.image,
-      withData: true,
+    // Definir tipos de imagen aceptados
+    final typeGroup = XTypeGroup(
+      label: 'images',
+      extensions: ['jpg', 'jpeg', 'png', 'gif'],
     );
+    // Abrir selector
+    final XFile? file = await openFile(acceptedTypeGroups: [typeGroup]);
 
-    if (result != null && result.files.single.bytes != null) {
-      Uint8List fileBytes = result.files.single.bytes!;
+    if (file != null) {
+      // Leer bytes
+      Uint8List fileBytes = await file.readAsBytes();
       setState(() {
         _avatarBytes = fileBytes;
       });
@@ -90,17 +95,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // Subir y guardar la URL
       try {
         String url = await _userService.uploadAvatar(currentUser!.uid, fileBytes);
-        print('Imagen subida con URL: $url');
+        print('Imagen subida con URL: \$url');
         currentUser!.avatarUrl = url; // Actualiza el modelo local
       } catch (e) {
-        print('Error al subir imagen: $e');
+        print('Error al subir imagen: \$e');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error al subir imagen')),
         );
       }
     }
   }
-
 
   void _showLogoutDialog() {
     showDialog(
@@ -139,8 +143,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       },
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(color: Colors.white),
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                        padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
                       ),
                       child: Text(
                         'Cancelar',
@@ -153,13 +156,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         await _userService.signOut();
                         ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text('Cierre de sesión exitoso')));
-                        Navigator.pushReplacement(context,
-                            MaterialPageRoute(builder: (context) => HomeScreen()));
+                        Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => HomeScreen()));
                       },
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(color: Colors.white),
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                        padding: EdgeInsets.symmetric(horizontal: 15, vertical: 8),
                       ),
                       child: Text(
                         'Sí',
