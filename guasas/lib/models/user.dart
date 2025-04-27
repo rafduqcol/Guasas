@@ -43,7 +43,7 @@ class User {
   
 
 
-  // Método para convertir un objeto User a un Map
+  
   Map<String, dynamic> toMap() {
     return {
       'uid': uid,
@@ -56,7 +56,7 @@ class User {
       'isGoogleUser': isGoogleUser,
     };
   }
-    // Método para convertir un Map a un objeto User
+  
   factory User.fromMap(Map<String, dynamic> map) {
     return User(
       uid: map['uid'] ?? '',
