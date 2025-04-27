@@ -4,6 +4,8 @@ Recomendamos que en el caso de que se quiera probar la aplicación se utilice el
 
 Video demo : https://www.youtube.com/watch?v=xByIQkSKqb0
 
+![Logo de la app](guasas/assets/images/Guasas_logo.png)
+
 
 ## 1. Requisitos Previos
 
