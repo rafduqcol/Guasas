@@ -10,6 +10,13 @@ Tener instalado Android Studio (o VSCode con los plugins de Flutter/Dart).
 
 Tener un emulador Android o un dispositivo físico conectado para probar.
 
+Gradle: Herramienta de automatización de compilación utilizada por Flutter para Android.
+
+CocoaPods: Gestor de dependencias para proyectos iOS en Flutter.
+
+Java versión 17 (Para evitar problemas)
+
+
 ## 2. Clonar el proyecto
 
 `git clone https://github.com/rafduqcol/Guasas.git`
