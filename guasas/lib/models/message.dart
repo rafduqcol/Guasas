@@ -19,7 +19,7 @@ class Message {
     required this.timestamp,
   });
 
-  /// Convertir desde un Map (Firebase) a objeto Message
+  
   factory Message.fromMap(Map<String, dynamic> map) {
     return Message(
       id: map['id'] ?? '',
@@ -32,7 +32,7 @@ class Message {
     );
   }
 
-  /// Convertir el objeto Message a Map (para guardar en Firebase)
+  
   Map<String, dynamic> toMap() {
     return {
       'id': id,
