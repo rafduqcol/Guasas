@@ -11,7 +11,7 @@ class AddUsersScreen extends StatefulWidget {
 
 class _AddUsersScreenState extends State<AddUsersScreen> {
   final currentUser = FirebaseAuth.instance.currentUser;
-  int _selectedIndex = 1; // Pantalla actual: Agregar Usuarios.
+  int _selectedIndex = 1;
 
   final List<String> _navOptions = ['Listar Chats', 'Agregar Usuarios', 'Perfil'];
   final TextEditingController _searchController = TextEditingController();
@@ -34,7 +34,6 @@ class _AddUsersScreenState extends State<AddUsersScreen> {
     }
   }
 
-  // Comprobar si ya existe un chat entre los dos usuarios
   Future<String?> checkIfChatExists(String userId) async {
     final chatsRef = FirebaseFirestore.instance.collection('chats');
     final existingChats = await chatsRef
@@ -48,13 +47,13 @@ class _AddUsersScreenState extends State<AddUsersScreen> {
 
       if ((user1 == currentUser!.uid && user2 == userId) ||
           (user1 == userId && user2 == currentUser!.uid)) {
-        return doc.id; // Ya existe el chat, devolvemos el ID
+        return doc.id; 
       }
     }
-    return null; // No existe el chat
+    return null;
   }
 
-  // Crear un chat con el usuario seleccionado
+ 
   Future<void> createChatWithUser(String userId) async {
     if (currentUser == null || currentUser!.uid.isEmpty) {
       print('No hay usuario actual. No se puede crear el chat.');
