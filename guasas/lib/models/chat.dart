@@ -16,7 +16,7 @@ class Chat {
     required this.creationDate,
   });
 
-  /// Convertir documento de Firebase a objeto Chat
+  
   factory Chat.fromMap(Map<String, dynamic> map, String documentId) {
     return Chat(
       id: documentId,
@@ -30,7 +30,7 @@ class Chat {
     );
   }
 
-  /// Convertir Chat a Map para subir a Firebase
+  
   Map<String, dynamic> toMap() {
     return {
       'user1Id': user1Id,
