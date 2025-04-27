@@ -124,7 +124,7 @@ Future<String?> registerUser(custom_user.User user) async {
 
 Future<String?> signInWithGoogle() async {
   try {
-    // Inicia el proceso de autenticación con Google
+    
     final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
     if (googleUser == null) {
       return 'El inicio de sesión con Google fue cancelado.';
@@ -196,7 +196,7 @@ Future<void> updateUserProfile({
       'username': username,
     };
 
-    // ✅ Solo actualiza el avatar si hay uno nuevo
+    
     if (avatarUrl != null) {
       updatedData['avatarUrl'] = avatarUrl;
     }
@@ -213,7 +213,7 @@ Future<void> updateUserProfile({
       await ref.putData(fileBytes);
       String downloadUrl = await ref.getDownloadURL();
 
-      // Guardar la URL en Firestore
+     
       await _firestore.collection('users').doc(uid).update({
         'avatarUrl': downloadUrl,
       });
