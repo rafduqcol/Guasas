@@ -1,4 +1,9 @@
-# Manual de Instalación y Arranque de la Aplicación de Chat
+# Manual de Instalación y Arranque de la Aplicación
+
+Recomendamos que en el caso de que se quiera probar la aplicación se utilice el **APK** de la release para facilitar el proceso
+
+Video demo : https://www.youtube.com/watch?v=xByIQkSKqb0
+
 
 ## 1. Requisitos Previos
 
